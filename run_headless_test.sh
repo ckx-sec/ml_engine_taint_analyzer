@@ -106,4 +106,8 @@ else
     exit 1
 fi
 
+# --- 清理 Python .py.class 缓存文件 ---
+echo "Cleaning up Python .py.class cache files in $SCRIPT_DIR ..."
+find "$SCRIPT_DIR" -name "*py.class" -type f -delete
+
 exit 0 

@@ -35,7 +35,7 @@
         "pcode_operation": "(register, 0x4000, 8) CALL (ram, 0x105d98, 8) , (register, 0x4000, 8) , (unique, 0x11f80, 8)", 
         "originating_imported_function_name": "getSessionOutput", 
         "usage_type": "TAINTED_ARG_TO_CALL_RECURSION", 
-        "details": "Recursive call to max_element<float_const*> (CALL) with taints: param_1(x0), param_2(x1).", 
+        "details": "Recursive call to max_element<float_const*> (CALL) with taints: param_2(x1), param_1(x0).", 
         "tainted_component": "N/A", 
         "found_in_function_entry": "001046ec"
     }, 
@@ -45,7 +45,7 @@
         "pcode_operation": "(register, 0x4000, 8) CALL (ram, 0x1063c0, 8) , (register, 0x4000, 8) , (register, 0x4008, 8) , (register, 0x4098, 4)", 
         "originating_imported_function_name": "getSessionOutput", 
         "usage_type": "TAINTED_ARG_TO_CALL_RECURSION", 
-        "details": "Recursive call to __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> (CALL) with taints: param_1(x0), param_2(x1).", 
+        "details": "Recursive call to __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> (CALL) with taints: param_2(x1), param_1(x0).", 
         "tainted_component": "N/A", 
         "found_in_function_entry": "00105d98"
     }, 
@@ -83,7 +83,7 @@
         "pcode_operation": "(register, 0x4000, 1) CALL (ram, 0x10638c, 8) , (unique, 0x11f80, 8) , (stack, 0xfffffffffffffff8, 8) , (unique, 0x11f80, 8)", 
         "originating_imported_function_name": "getSessionOutput", 
         "usage_type": "TAINTED_ARG_TO_CALL_RECURSION", 
-        "details": "Recursive call to operator() (CALL) with taints: param_1(x1), param_2(x2).", 
+        "details": "Recursive call to operator() (CALL) with taints: param_2(x2), param_1(x1).", 
         "tainted_component": "N/A", 
         "found_in_function_entry": "001063c0"
     }, 

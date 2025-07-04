@@ -1,14 +1,14 @@
-2025-07-04 16:34:49 INFO  (LoggingInitialization) Using log config file: jar:file:/Applications/ghidra_11.0.3_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml  
-2025-07-04 16:34:49 INFO  (LoggingInitialization) Using log file: /Users/chenkexin/Desktop/kk/ml_taint_analyzer/headless_analysis.log  
-2025-07-04 16:34:49 INFO  (Preferences) Loading user preferences: /Users/chenkexin/.ghidra/.ghidra_11.0.3_PUBLIC/preferences  
-2025-07-04 16:34:49 INFO  (Preferences) Loading previous preferences: /Users/chenkexin/.ghidra/.ghidra_10.4_PUBLIC/preferences  
-2025-07-04 16:34:49 INFO  (ClassSearcher) Searching for classes...  
-2025-07-04 16:34:51 INFO  (ClassSearcher) Class search complete (2298 ms)  
-2025-07-04 16:34:51 INFO  (SSLContextInitializer) Initializing SSL Context  
-2025-07-04 16:34:51 INFO  (SecureRandomFactory) Initializing Random Number Generator...  
-2025-07-04 16:34:51 INFO  (SecureRandomFactory) Random Number Generator initialization complete: NativePRNGNonBlocking  
-2025-07-04 16:34:51 INFO  (ApplicationTrustManagerFactory) Trust manager disabled, cacerts have not been set  
-2025-07-04 16:34:52 INFO  (HeadlessAnalyzer) HEADLESS Script Paths:
+2025-07-04 16:48:44 INFO  (LoggingInitialization) Using log config file: jar:file:/Applications/ghidra_11.0.3_PUBLIC/Ghidra/Framework/Generic/lib/Generic.jar!/generic.log4j.xml  
+2025-07-04 16:48:44 INFO  (LoggingInitialization) Using log file: /Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/headless_analysis.log  
+2025-07-04 16:48:44 INFO  (Preferences) Loading user preferences: /Users/chenkexin/.ghidra/.ghidra_11.0.3_PUBLIC/preferences  
+2025-07-04 16:48:44 INFO  (Preferences) Loading previous preferences: /Users/chenkexin/.ghidra/.ghidra_10.4_PUBLIC/preferences  
+2025-07-04 16:48:44 INFO  (ClassSearcher) Searching for classes...  
+2025-07-04 16:48:46 INFO  (ClassSearcher) Class search complete (1471 ms)  
+2025-07-04 16:48:46 INFO  (SSLContextInitializer) Initializing SSL Context  
+2025-07-04 16:48:46 INFO  (SecureRandomFactory) Initializing Random Number Generator...  
+2025-07-04 16:48:46 INFO  (SecureRandomFactory) Random Number Generator initialization complete: NativePRNGNonBlocking  
+2025-07-04 16:48:46 INFO  (ApplicationTrustManagerFactory) Trust manager disabled, cacerts have not been set  
+2025-07-04 16:48:47 INFO  (HeadlessAnalyzer) HEADLESS Script Paths:
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Processors/8051/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/FileFormats/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/Base/ghidra_scripts
@@ -19,7 +19,7 @@
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/BytePatterns/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/Decompiler/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Processors/Atmel/ghidra_scripts
-    /Users/chenkexin/Desktop/kk/ml_taint_analyzer
+    /Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Debug/Debugger-agent-frida/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/FunctionID/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Processors/JVM/ghidra_scripts
@@ -32,267 +32,267 @@
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Debug/Debugger-rmi-trace/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/VersionTracking/ghidra_scripts
     /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Debug/Debugger/ghidra_scripts  
-2025-07-04 16:34:52 INFO  (HeadlessAnalyzer) HEADLESS: execution starts  
-2025-07-04 16:34:52 INFO  (HeadlessAnalyzer) Creating project: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.lLy49kD5dL/HeadlessTaintAnalysis  
-2025-07-04 16:34:52 INFO  (DefaultProject) Creating project: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.lLy49kD5dL/HeadlessTaintAnalysis  
-2025-07-04 16:34:52 INFO  (HeadlessAnalyzer) REPORT: Processing input files:   
-2025-07-04 16:34:52 INFO  (HeadlessAnalyzer)      project: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.lLy49kD5dL/HeadlessTaintAnalysis  
-2025-07-04 16:34:52 INFO  (HeadlessAnalyzer) IMPORTING: file:///Users/chenkexin/Desktop/kk/ml_taint_analyzer/emotion_ferplus_mnn  
-2025-07-04 16:34:54 INFO  (AutoImporter) Using Loader: Executable and Linking Format (ELF)  
-2025-07-04 16:34:54 INFO  (AutoImporter) Using Language/Compiler: AARCH64:LE:64:v8A:default  
-2025-07-04 16:34:55 DEBUG (ElfHeader) Elf symbol table section .dynsym linked to string table section .dynstr  
-2025-07-04 16:34:55 DEBUG (ElfHeader) Elf symbol table section .symtab linked to string table section .strtab  
-2025-07-04 16:34:55 DEBUG (ElfHeader) Elf relocation table section .rela.dyn linked to symbol table section .dynsym affecting PT_LOAD  
-2025-07-04 16:34:55 DEBUG (ElfHeader) Elf relocation table section .rela.plt linked to symbol table section .dynsym affecting .got  
-2025-07-04 16:34:55 DEBUG (ElfProgramBuilder) Discarding 1-byte alignment/filler segment_2.3 at 00100253  
-2025-07-04 16:34:55 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.7 at 00100354  
-2025-07-04 16:34:55 DEBUG (ElfProgramBuilder) Discarding 2-byte alignment/filler segment_2.11 at 00101c2e  
-2025-07-04 16:34:55 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.16 at 001041cc  
-2025-07-04 16:34:55 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.20 at 001080c4  
-2025-07-04 16:34:55 DEBUG (ElfProgramBuilder) Discarding 1-byte alignment/filler segment_2.22 at 00108827  
-2025-07-04 16:34:55 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.24 at 0010904c  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8b0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8c8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8e0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8f8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b910 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b928 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b940 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b958 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b970 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b988 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9a0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9c8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9e0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9f8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba10 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba28 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba40 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba58 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba70 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba98 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9b8 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba88 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bad0 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bae0 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bab0 (External Location = _ZTVN10__cxxabiv116__enum_type_infoE+0x10)  
-2025-07-04 16:34:56 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bac0 (External Location = _ZTVN10__cxxabiv116__enum_type_infoE+0x10)  
-2025-07-04 16:34:56 INFO  (HeadlessAnalyzer) IMPORTING: Loaded 0 additional files  
-2025-07-04 16:34:57 INFO  (HeadlessAnalyzer) ANALYZING all memory and code: file:///Users/chenkexin/Desktop/kk/ml_taint_analyzer/emotion_ferplus_mnn  
-2025-07-04 16:34:57 INFO  (ExternalDebugFilesService) DWARF external debug information found: ExternalDebugInfo [filename=null, crc=0, hash=a07f9cf22404ab94bd4a589b48af4317a3715396]  
-2025-07-04 16:34:57 INFO  (DWARFAnalyzer) Unable to find DWARF information, skipping DWARF analysis  
-2025-07-04 16:35:00 INFO  (PackedDatabaseCache) Packed database cache: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/chenkexin-Ghidra/packed-db-cache  
-2025-07-04 16:35:00 DEBUG (PackedDatabaseCache) Using cached packed database: /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/Base/data/typeinfo/generic/generic_clib_64.gdt  
-2025-07-04 16:35:01 INFO  (ApplyDataArchiveAnalyzer) Applied data type archive: generic_clib_64  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d040: __cxxabiv1::__class_type_info::vtable  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d058: int::typeinfo  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d088: float::typeinfo  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d0b8: char_const*::typeinfo  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d0e8: bool::typeinfo  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d178: unsigned_int::typeinfo  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d218: __cxxabiv1::__si_class_type_info::vtable  
-2025-07-04 16:35:02 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d240: __cxxabiv1::__enum_type_info::vtable  
-2025-07-04 16:35:04 INFO  (AutoAnalysisManager) -----------------------------------------------------
-    AARCH64 ELF PLT Thunks                     0.240 secs
-    ASCII Strings                              0.293 secs
-    Apply Data Archives                        1.110 secs
-    Basic Constant Reference Analyzer          0.990 secs
-    Call Convention ID                         0.776 secs
-    Call-Fixup Installer                       0.030 secs
-    Create Address Tables                      0.043 secs
-    Create Address Tables - One Time           0.057 secs
+2025-07-04 16:48:47 INFO  (HeadlessAnalyzer) HEADLESS: execution starts  
+2025-07-04 16:48:47 INFO  (HeadlessAnalyzer) Creating project: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.Nn7GCYrpmR/HeadlessTaintAnalysis  
+2025-07-04 16:48:47 INFO  (DefaultProject) Creating project: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.Nn7GCYrpmR/HeadlessTaintAnalysis  
+2025-07-04 16:48:47 INFO  (HeadlessAnalyzer) REPORT: Processing input files:   
+2025-07-04 16:48:47 INFO  (HeadlessAnalyzer)      project: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.Nn7GCYrpmR/HeadlessTaintAnalysis  
+2025-07-04 16:48:47 INFO  (HeadlessAnalyzer) IMPORTING: file:///Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/emotion_ferplus_mnn  
+2025-07-04 16:48:49 INFO  (AutoImporter) Using Loader: Executable and Linking Format (ELF)  
+2025-07-04 16:48:49 INFO  (AutoImporter) Using Language/Compiler: AARCH64:LE:64:v8A:default  
+2025-07-04 16:48:49 DEBUG (ElfHeader) Elf symbol table section .dynsym linked to string table section .dynstr  
+2025-07-04 16:48:49 DEBUG (ElfHeader) Elf symbol table section .symtab linked to string table section .strtab  
+2025-07-04 16:48:49 DEBUG (ElfHeader) Elf relocation table section .rela.dyn linked to symbol table section .dynsym affecting PT_LOAD  
+2025-07-04 16:48:49 DEBUG (ElfHeader) Elf relocation table section .rela.plt linked to symbol table section .dynsym affecting .got  
+2025-07-04 16:48:49 DEBUG (ElfProgramBuilder) Discarding 1-byte alignment/filler segment_2.3 at 00100253  
+2025-07-04 16:48:49 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.7 at 00100354  
+2025-07-04 16:48:49 DEBUG (ElfProgramBuilder) Discarding 2-byte alignment/filler segment_2.11 at 00101c2e  
+2025-07-04 16:48:49 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.16 at 001041cc  
+2025-07-04 16:48:49 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.20 at 001080c4  
+2025-07-04 16:48:49 DEBUG (ElfProgramBuilder) Discarding 1-byte alignment/filler segment_2.22 at 00108827  
+2025-07-04 16:48:49 DEBUG (ElfProgramBuilder) Discarding 4-byte alignment/filler segment_2.24 at 0010904c  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8b0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8c8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8e0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b8f8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b910 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b928 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b940 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b958 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b970 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b988 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9a0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9c8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9e0 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9f8 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba10 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba28 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba40 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba58 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba70 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba98 (External Location = _ZTVN10__cxxabiv120__si_class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011b9b8 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011ba88 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bad0 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bae0 (External Location = _ZTVN10__cxxabiv117__class_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bab0 (External Location = _ZTVN10__cxxabiv116__enum_type_infoE+0x10)  
+2025-07-04 16:48:50 WARN  (ElfRelocationHandler) EXTERNAL Data Elf Relocation with offset: at 0011bac0 (External Location = _ZTVN10__cxxabiv116__enum_type_infoE+0x10)  
+2025-07-04 16:48:51 INFO  (HeadlessAnalyzer) IMPORTING: Loaded 0 additional files  
+2025-07-04 16:48:51 INFO  (HeadlessAnalyzer) ANALYZING all memory and code: file:///Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/emotion_ferplus_mnn  
+2025-07-04 16:48:51 INFO  (ExternalDebugFilesService) DWARF external debug information found: ExternalDebugInfo [filename=null, crc=0, hash=a07f9cf22404ab94bd4a589b48af4317a3715396]  
+2025-07-04 16:48:51 INFO  (DWARFAnalyzer) Unable to find DWARF information, skipping DWARF analysis  
+2025-07-04 16:48:54 INFO  (PackedDatabaseCache) Packed database cache: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/chenkexin-Ghidra/packed-db-cache  
+2025-07-04 16:48:54 DEBUG (PackedDatabaseCache) Using cached packed database: /Applications/ghidra_11.0.3_PUBLIC/Ghidra/Features/Base/data/typeinfo/generic/generic_clib_64.gdt  
+2025-07-04 16:48:55 INFO  (ApplyDataArchiveAnalyzer) Applied data type archive: generic_clib_64  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d040: __cxxabiv1::__class_type_info::vtable  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d058: int::typeinfo  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d088: float::typeinfo  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d0b8: char_const*::typeinfo  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d0e8: bool::typeinfo  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d178: unsigned_int::typeinfo  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d218: __cxxabiv1::__si_class_type_info::vtable  
+2025-07-04 16:48:56 WARN  (DemangledAddressTable) Unable to fully apply external demangled Address Table at 0011d240: __cxxabiv1::__enum_type_info::vtable  
+2025-07-04 16:48:58 INFO  (AutoAnalysisManager) -----------------------------------------------------
+    AARCH64 ELF PLT Thunks                     0.248 secs
+    ASCII Strings                              0.260 secs
+    Apply Data Archives                        1.112 secs
+    Basic Constant Reference Analyzer          0.720 secs
+    Call Convention ID                         0.634 secs
+    Call-Fixup Installer                       0.028 secs
+    Create Address Tables                      0.041 secs
+    Create Address Tables - One Time           0.068 secs
     Create Function                            0.000 secs
     DWARF                                      0.014 secs
-    Data Reference                             0.061 secs
-    Decompiler Switch Analysis                 0.175 secs
-    Demangler GNU                              0.795 secs
-    Disassemble                                0.008 secs
-    Disassemble Entry Points                   0.235 secs
-    Embedded Media                             0.016 secs
-    External Entry References                  0.002 secs
-    Function Start Search                      0.085 secs
-    Function Start Search After Code           0.060 secs
-    Function Start Search After Data           0.017 secs
-    Function Start Search delayed - One Time   0.020 secs
-    GCC Exception Handlers                     1.316 secs
-    Non-Returning Functions - Discovered       0.025 secs
-    Non-Returning Functions - Known            0.021 secs
-    Reference                                  0.135 secs
-    Shared Return Calls                        0.049 secs
-    Stack                                      0.601 secs
-    Subroutine References                      0.029 secs
+    Data Reference                             0.039 secs
+    Decompiler Switch Analysis                 0.180 secs
+    Demangler GNU                              0.635 secs
+    Disassemble                                0.014 secs
+    Disassemble Entry Points                   0.287 secs
+    Embedded Media                             0.020 secs
+    External Entry References                  0.003 secs
+    Function Start Search                      0.118 secs
+    Function Start Search After Code           0.058 secs
+    Function Start Search After Data           0.023 secs
+    Function Start Search delayed - One Time   0.010 secs
+    GCC Exception Handlers                     1.174 secs
+    Non-Returning Functions - Discovered       0.023 secs
+    Non-Returning Functions - Known            0.036 secs
+    Reference                                  0.172 secs
+    Shared Return Calls                        0.045 secs
+    Stack                                      0.604 secs
+    Subroutine References                      0.031 secs
 -----------------------------------------------------
-     Total Time   7 secs
+     Total Time   6 secs
 -----------------------------------------------------
   
-2025-07-04 16:35:04 INFO  (HeadlessAnalyzer) REPORT: Analysis succeeded for file: file:///Users/chenkexin/Desktop/kk/ml_taint_analyzer/emotion_ferplus_mnn  
-2025-07-04 16:35:04 INFO  (HeadlessAnalyzer) SCRIPT: /Users/chenkexin/Desktop/kk/ml_taint_analyzer/mnn_analyzer.py  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: Searching for functions, thunks, and call sites related to keyword 'getSessionOutput'  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found external function 'getSessionOutput'. Searching for its thunks.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found thunk 'getSessionOutput' at 001043e0 for external function.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found thunk 'getSessionOutput' at 0011d140 for external function.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found 2 unique call sites. Analyzing each...  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n--- Analyzing Call Site #1065964 at 001043ec ---  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Parent (caller): getSessionOutput at 001043e0  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: Call at 001043ec has no output varnode. Nothing to taint. Skipping.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n--- Analyzing Call Site #1067608 at 00104a58 ---  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Parent (caller): main at 001046ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n--- Initiating Taint Analysis for: main (call at 00104a58) ---  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Taint source is the return value of the call: UNNAMED(UniquePcode[0x100004e4])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: main (Depth: 0) at 001046ec (Originating from: getSessionOutput) with initial taints: UNNAMED(UniquePcode[0x100004e4])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \nDEBUG: Reached specified start PcodeOp (unique, 0x100004e4, 8) CALL (ram, 0x1043e0, 8) , (register, 0x4000, 8) , (stack, 0xfffffffffffffdb0, 8) at 00104a58 in main, subsequent ops will be processed.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104a58] Taint propagated from UNNAMED(UniquePcode[0x100004e4]) to local_230(StackDirect[Stack[-0x230]]) via CAST.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: Tensor (Depth: 1) at 001042e0 (Originating from: getSessionOutput) with initial taints: param_1(x1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function Tensor.  
-2025-07-04 16:35:09 WARN  (DecompileCallback) Decompiling 0011d090, pcode error at 0011d090: Unable to disassemble EXTERNAL block location: 0011d090  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: Tensor (Depth: 2) at 0011d090 (Originating from: getSessionOutput) with initial taints: param_1(x1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function Tensor.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: Tensor.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: Tensor.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: [MNN_RULE] Found call to 'copyToHostTensor' with a tainted 'this' pointer: local_230(StackDirect[Stack[-0x230]])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: [MNN_RULE] SUCCESS! Found subsequent call to 'host<float>' and applying heuristic.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [MNN_RULE] Tainting return value of host<float>: local_228(StackDirect[Stack[-0x228]])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: [MNN_RULE] Halting analysis for this PCodeOp to prevent recursion into 'copyToHostTensor'.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104aa0] Taint propagated from local_228(StackDirect[Stack[-0x228]]) to UNNAMED(UniquePcode[0x11f80]) via PTRADD.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: max_element<float_const*> (Depth: 1) at 00105d98 (Originating from: getSessionOutput) with initial taints: param_1(x0), param_2(x1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function max_element<float_const*>.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> (Depth: 2) at 001063c0 (Originating from: getSessionOutput) with initial taints: param_1(x0), param_2(x1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter>.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063dc] Taint propagated from param_1(x0) to UNNAMED(tmpZR) via INT_NOTEQUAL.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint reached CBRANCH. Operands: ['param_1(x0)', 'param_2(x1)'].  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint propagated from param_1(x0) to local_8(StackDirect[Stack[-0x8]]) via COPY.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint propagated from param_2(x1) to local_20(StackDirect[Stack[-0x20]]) via COPY.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint propagated from param_1(x0) to local_18(StackDirect[Stack[-0x18]]) via COPY.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 00106408] Taint propagated from local_18(StackDirect[Stack[-0x18]]) to UNNAMED(tmpZR) via INT_NOTEQUAL.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 00106418] Taint reached CBRANCH. Operands: ['local_18(StackDirect[Stack[-0x18]])', 'local_20(StackDirect[Stack[-0x20]])'].  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: operator() (Depth: 3) at 0010638c (Originating from: getSessionOutput) with initial taints: param_1(x1), param_2(x2)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function operator().  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063a0] Taint propagated from param_1(x1) to UNNAMED(s1) via LOAD.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063a8] Taint propagated from param_2(x2) to UNNAMED(s0) via LOAD.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063ac] Taint propagated from UNNAMED(s1) to UNNAMED(UniquePcode[0x10000009]) via FLOAT_LESS.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063bc] Taint propagated from UNNAMED(UniquePcode[0x10000009]) to UNNAMED(w0) via COPY.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: operator().  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter>.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: max_element<float_const*>.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104ab8] Taint propagated from local_228(StackDirect[Stack[-0x228]]) to UNNAMED(UniquePcode[0x100004fc]) via CAST.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104ad0] Taint propagated from local_228(StackDirect[Stack[-0x228]]) to UNNAMED(UniquePcode[0x12480]) via PTRADD.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104ad4] Taint propagated from UNNAMED(UniquePcode[0x12480]) to fVar12(s0) via LOAD.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104b28] Taint propagated from fVar12(s0) to UNNAMED(UniquePcode[0x1580]) via FLOAT_LESSEQUAL.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: [main @ 00104b28] Taint reached CBRANCH. Operands: ['fVar12(s0)', 'UnnamedHighVar(Constant)'].  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104b50] Taint propagated from fVar12(s0) to UNNAMED(d0) via FLOAT2FLOAT.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104b74] Taint propagated from fVar12(s0) to UNNAMED(d0) via FLOAT2FLOAT.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: main.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n--- Taint Analysis Run Complete ---  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> \n--- All Detected Tainted Value Usages (Interprocedural) ---  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #1:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104a7c  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x1042e0, 8) , (unique, 0x11f80, 8) , (stack, 0xfffffffffffffdd0, 8) , (register, 0x4000, 4) , (const, 0x1, 1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to Tensor (CALL) with taints: param_1(x1).  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #2:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   Tensor at 001042e0  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 001042ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x11d090, 8) , (register, 0x4000, 8) , (register, 0x4008, 8) , (register, 0x4010, 4) , (register, 0x4018, 1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to Tensor (CALL) with taints: param_1(x1).  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #3:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104a94  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 8) CALL (ram, 0x105d80, 8)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINT_PROPAGATED_FROM_HOST_CALL_RETURN  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   local_228(StackDirect[Stack[-0x228]])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Return of 'host<float>' tainted due to 'copyToHostTensor' MNN-specific heuristic.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #4:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104aac  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 8) CALL (ram, 0x105d98, 8) , (register, 0x4000, 8) , (unique, 0x11f80, 8)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to max_element<float_const*> (CALL) with taints: param_1(x0), param_2(x1).  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #5:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   max_element<float_const*> at 00105d98  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00105dbc  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 8) CALL (ram, 0x1063c0, 8) , (register, 0x4000, 8) , (register, 0x4008, 8) , (register, 0x4098, 4)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> (CALL) with taints: param_1(x0), param_2(x1).  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #6:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 001063e0  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CBRANCH (ram, 0x1063ec, 1) , (register, 0x108, 1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          BRANCH_CONDITION_TAINTED  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   UNNAMED(tmpZR)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Compared Operands:   param_1(x0) vs param_2(x1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted condition for branch.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #7:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00106418  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CBRANCH (ram, 0x106444, 1) , (register, 0x108, 1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          BRANCH_CONDITION_TAINTED  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   UNNAMED(tmpZR)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Compared Operands:   local_18(StackDirect[Stack[-0x18]]) vs local_20(StackDirect[Stack[-0x20]])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted condition for branch.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #8:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00106428  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 1) CALL (ram, 0x10638c, 8) , (unique, 0x11f80, 8) , (stack, 0xfffffffffffffff8, 8) , (unique, 0x11f80, 8)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to operator() (CALL) with taints: param_1(x1), param_2(x2).  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #9:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 0010644c  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  RETURN (const, 0x0, 8) , (register, 0x4000, 8)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          RETURN_TAINTED_VALUE  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   local_8(StackDirect[Stack[-0x8]])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #10:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104b28  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CBRANCH (ram, 0x104b64, 1) , (unique, 0x1580, 1)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          BRANCH_CONDITION_TAINTED  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   UNNAMED(UniquePcode[0x1580])  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Compared Operands:   fVar12(s0) vs UnnamedHighVar(Constant)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted condition for branch.  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #11:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104b5c  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x104470, 8) , (unique, 0x10000282, 8) , (register, 0x5000, 8)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted PCode args (PCodeArg#1:UNNAMED(d0)) to printf (CALL) cannot map to HighProto (count 1).  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Usage #12:  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104b80  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x104470, 8) , (unique, 0x1000028a, 8) , (register, 0x5000, 8)  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted PCode args (PCodeArg#1:UNNAMED(d0)) to printf (CALL) cannot map to HighProto (count 1).  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> INFO: TAINT_ANALYSIS_JSON_OUTPUT env var found. Saving results to: /Users/chenkexin/Desktop/kk/ml_taint_analyzer/taint_analysis_results.json  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> Taint analysis results saved to: /Users/chenkexin/Desktop/kk/ml_taint_analyzer/taint_analysis_results.json  
-2025-07-04 16:35:09 INFO  (GhidraScript) mnn_analyzer.py> MNN Taint Analyzer finished.  
-2025-07-04 16:35:09 INFO  (HeadlessAnalyzer) ANALYZING changes made by post scripts: file:///Users/chenkexin/Desktop/kk/ml_taint_analyzer/emotion_ferplus_mnn  
-2025-07-04 16:35:09 INFO  (HeadlessAnalyzer) REPORT: Post-analysis succeeded for file: file:///Users/chenkexin/Desktop/kk/ml_taint_analyzer/emotion_ferplus_mnn  
-2025-07-04 16:35:09 INFO  (HeadlessAnalyzer) REPORT: Save succeeded for: /emotion_ferplus_mnn (HeadlessTaintAnalysis:/emotion_ferplus_mnn)  
-2025-07-04 16:35:09 INFO  (HeadlessAnalyzer) REPORT: Import succeeded  
-2025-07-04 16:35:09 DEBUG (DefaultProjectData) Closing ProjectData: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.lLy49kD5dL/HeadlessTaintAnalysis.rep  
-2025-07-04 16:35:09 DEBUG (DefaultProjectData) Disposing ProjectData: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.lLy49kD5dL/HeadlessTaintAnalysis.rep  
+2025-07-04 16:48:58 INFO  (HeadlessAnalyzer) REPORT: Analysis succeeded for file: file:///Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/emotion_ferplus_mnn  
+2025-07-04 16:48:58 INFO  (HeadlessAnalyzer) SCRIPT: /Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/mnn_analyzer.py  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: Searching for functions, thunks, and call sites related to keyword 'getSessionOutput'  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found external function 'getSessionOutput'. Searching for its thunks.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found thunk 'getSessionOutput' at 001043e0 for external function.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found thunk 'getSessionOutput' at 0011d140 for external function.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: Found 2 unique call sites. Analyzing each...  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n--- Analyzing Call Site #1065964 at 001043ec ---  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Parent (caller): getSessionOutput at 001043e0  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: Call at 001043ec has no output varnode. Nothing to taint. Skipping.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n--- Analyzing Call Site #1067608 at 00104a58 ---  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Parent (caller): main at 001046ec  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n--- Initiating Taint Analysis for: main (call at 00104a58) ---  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Taint source is the return value of the call: UNNAMED(UniquePcode[0x100004e4])  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: main (Depth: 0) at 001046ec (Originating from: getSessionOutput) with initial taints: UNNAMED(UniquePcode[0x100004e4])  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \nDEBUG: Reached specified start PcodeOp (unique, 0x100004e4, 8) CALL (ram, 0x1043e0, 8) , (register, 0x4000, 8) , (stack, 0xfffffffffffffdb0, 8) at 00104a58 in main, subsequent ops will be processed.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104a58] Taint propagated from UNNAMED(UniquePcode[0x100004e4]) to local_230(StackDirect[Stack[-0x230]]) via CAST.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: Tensor (Depth: 1) at 001042e0 (Originating from: getSessionOutput) with initial taints: param_1(x1)  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function Tensor.  
+2025-07-04 16:49:02 WARN  (DecompileCallback) Decompiling 0011d090, pcode error at 0011d090: Unable to disassemble EXTERNAL block location: 0011d090  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: Tensor (Depth: 2) at 0011d090 (Originating from: getSessionOutput) with initial taints: param_1(x1)  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function Tensor.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: Tensor.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: Tensor.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: [MNN_RULE] Found call to 'copyToHostTensor' with a tainted 'this' pointer: local_230(StackDirect[Stack[-0x230]])  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: [MNN_RULE] SUCCESS! Found subsequent call to 'host<float>' and applying heuristic.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [MNN_RULE] Tainting return value of host<float>: local_228(StackDirect[Stack[-0x228]])  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: [MNN_RULE] Halting analysis for this PCodeOp to prevent recursion into 'copyToHostTensor'.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104aa0] Taint propagated from local_228(StackDirect[Stack[-0x228]]) to UNNAMED(UniquePcode[0x11f80]) via PTRADD.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: max_element<float_const*> (Depth: 1) at 00105d98 (Originating from: getSessionOutput) with initial taints: param_2(x1), param_1(x0)  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function max_element<float_const*>.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> (Depth: 2) at 001063c0 (Originating from: getSessionOutput) with initial taints: param_2(x1), param_1(x0)  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter>.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063dc] Taint propagated from param_1(x0) to UNNAMED(tmpZR) via INT_NOTEQUAL.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint reached CBRANCH. Operands: ['param_1(x0)', 'param_2(x1)'].  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint propagated from param_1(x0) to local_8(StackDirect[Stack[-0x8]]) via COPY.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint propagated from param_2(x1) to local_20(StackDirect[Stack[-0x20]]) via COPY.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 001063e0] Taint propagated from param_1(x0) to local_18(StackDirect[Stack[-0x18]]) via COPY.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 00106408] Taint propagated from local_18(StackDirect[Stack[-0x18]]) to UNNAMED(tmpZR) via INT_NOTEQUAL.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: [__max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> @ 00106418] Taint reached CBRANCH. Operands: ['local_18(StackDirect[Stack[-0x18]])', 'local_20(StackDirect[Stack[-0x20]])'].  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> \n>>> Analyzing function: operator() (Depth: 3) at 0010638c (Originating from: getSessionOutput) with initial taints: param_2(x2), param_1(x1)  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: Starting taint analysis from the beginning of function operator().  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063a0] Taint propagated from param_1(x1) to UNNAMED(s1) via LOAD.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063a8] Taint propagated from param_2(x2) to UNNAMED(s0) via LOAD.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063ac] Taint propagated from UNNAMED(s1) to UNNAMED(UniquePcode[0x10000009]) via FLOAT_LESS.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [operator() @ 001063bc] Taint propagated from UNNAMED(UniquePcode[0x10000009]) to UNNAMED(w0) via COPY.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: operator().  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter>.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: max_element<float_const*>.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104ab8] Taint propagated from local_228(StackDirect[Stack[-0x228]]) to UNNAMED(UniquePcode[0x100004fc]) via CAST.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104ad0] Taint propagated from local_228(StackDirect[Stack[-0x228]]) to UNNAMED(UniquePcode[0x12480]) via PTRADD.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104ad4] Taint propagated from UNNAMED(UniquePcode[0x12480]) to fVar12(s0) via LOAD.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104b28] Taint propagated from fVar12(s0) to UNNAMED(UniquePcode[0x1580]) via FLOAT_LESSEQUAL.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> INFO: [main @ 00104b28] Taint reached CBRANCH. Operands: ['fVar12(s0)', 'UnnamedHighVar(Constant)'].  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104b50] Taint propagated from fVar12(s0) to UNNAMED(d0) via FLOAT2FLOAT.  
+2025-07-04 16:49:02 INFO  (GhidraScript) mnn_analyzer.py> DEBUG: [main @ 00104b74] Taint propagated from fVar12(s0) to UNNAMED(d0) via FLOAT2FLOAT.  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> <<< Finished analyzing function: main.  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> \n--- Taint Analysis Run Complete ---  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> \n--- All Detected Tainted Value Usages (Interprocedural) ---  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #1:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104a7c  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x1042e0, 8) , (unique, 0x11f80, 8) , (stack, 0xfffffffffffffdd0, 8) , (register, 0x4000, 4) , (const, 0x1, 1)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to Tensor (CALL) with taints: param_1(x1).  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #2:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   Tensor at 001042e0  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 001042ec  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x11d090, 8) , (register, 0x4000, 8) , (register, 0x4008, 8) , (register, 0x4010, 4) , (register, 0x4018, 1)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to Tensor (CALL) with taints: param_1(x1).  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #3:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104a94  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 8) CALL (ram, 0x105d80, 8)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINT_PROPAGATED_FROM_HOST_CALL_RETURN  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   local_228(StackDirect[Stack[-0x228]])  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Return of 'host<float>' tainted due to 'copyToHostTensor' MNN-specific heuristic.  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #4:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104aac  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 8) CALL (ram, 0x105d98, 8) , (register, 0x4000, 8) , (unique, 0x11f80, 8)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to max_element<float_const*> (CALL) with taints: param_2(x1), param_1(x0).  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #5:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   max_element<float_const*> at 00105d98  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00105dbc  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 8) CALL (ram, 0x1063c0, 8) , (register, 0x4000, 8) , (register, 0x4008, 8) , (register, 0x4098, 4)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> (CALL) with taints: param_2(x1), param_1(x0).  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #6:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 001063e0  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CBRANCH (ram, 0x1063ec, 1) , (register, 0x108, 1)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          BRANCH_CONDITION_TAINTED  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   UNNAMED(tmpZR)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Compared Operands:   param_1(x0) vs param_2(x1)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted condition for branch.  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #7:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00106418  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CBRANCH (ram, 0x106444, 1) , (register, 0x108, 1)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          BRANCH_CONDITION_TAINTED  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   UNNAMED(tmpZR)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Compared Operands:   local_18(StackDirect[Stack[-0x18]]) vs local_20(StackDirect[Stack[-0x20]])  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted condition for branch.  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #8:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00106428  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:            (register, 0x4000, 1) CALL (ram, 0x10638c, 8) , (unique, 0x11f80, 8) , (stack, 0xfffffffffffffff8, 8) , (unique, 0x11f80, 8)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_RECURSION  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Recursive call to operator() (CALL) with taints: param_2(x2), param_1(x1).  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #9:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   __max_element<float_const*,__gnu_cxx::__ops::_Iter_less_iter> at 001063c0  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 0010644c  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  RETURN (const, 0x0, 8) , (register, 0x4000, 8)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          RETURN_TAINTED_VALUE  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   local_8(StackDirect[Stack[-0x8]])  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #10:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104b28  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CBRANCH (ram, 0x104b64, 1) , (unique, 0x1580, 1)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          BRANCH_CONDITION_TAINTED  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Tainted Component:   UNNAMED(UniquePcode[0x1580])  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Compared Operands:   fVar12(s0) vs UnnamedHighVar(Constant)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted condition for branch.  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #11:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104b5c  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x104470, 8) , (unique, 0x10000282, 8) , (register, 0x5000, 8)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted PCode args (PCodeArg#1:UNNAMED(d0)) to printf (CALL) cannot map to HighProto (count 1).  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Usage #12:  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Originating Lib Call: getSessionOutput  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Found In Function:   main at 001046ec  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>   Instruction Address: 00104b80  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     PCode Op:             ---  CALL (ram, 0x104470, 8) , (unique, 0x1000028a, 8) , (register, 0x5000, 8)  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Usage Type:          TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py>     Details:             Tainted PCode args (PCodeArg#1:UNNAMED(d0)) to printf (CALL) cannot map to HighProto (count 1).  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> ----------------------------------------  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> INFO: TAINT_ANALYSIS_JSON_OUTPUT env var found. Saving results to: /Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/taint_analysis_results.json  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> Taint analysis results saved to: /Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/taint_analysis_results.json  
+2025-07-04 16:49:03 INFO  (GhidraScript) mnn_analyzer.py> MNN Taint Analyzer finished.  
+2025-07-04 16:49:03 INFO  (HeadlessAnalyzer) ANALYZING changes made by post scripts: file:///Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/emotion_ferplus_mnn  
+2025-07-04 16:49:03 INFO  (HeadlessAnalyzer) REPORT: Post-analysis succeeded for file: file:///Users/chenkexin/Desktop/kk/ml_engine_taint_analyzer/emotion_ferplus_mnn  
+2025-07-04 16:49:03 INFO  (HeadlessAnalyzer) REPORT: Save succeeded for: /emotion_ferplus_mnn (HeadlessTaintAnalysis:/emotion_ferplus_mnn)  
+2025-07-04 16:49:03 INFO  (HeadlessAnalyzer) REPORT: Import succeeded  
+2025-07-04 16:49:03 DEBUG (DefaultProjectData) Closing ProjectData: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.Nn7GCYrpmR/HeadlessTaintAnalysis.rep  
+2025-07-04 16:49:03 DEBUG (DefaultProjectData) Disposing ProjectData: /var/folders/kn/fw_2jn054bq5f73czrm_91nc0000gn/T/tmp.Nn7GCYrpmR/HeadlessTaintAnalysis.rep  
