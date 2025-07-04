@@ -41,9 +41,16 @@ GHIDRA_PROJECT_NAME="HeadlessTaintAnalysis"
 # Extract the basename of the binary to use in output filenames
 BINARY_BASENAME=$(basename "$TARGET_BINARY_PATH")
 
+# --- Output Directories and Files ---
+# Create dedicated directories for logs and results if they don't exist
+LOG_DIR="$SCRIPT_DIR/logs"
+RESULTS_DIR="$SCRIPT_DIR/results"
+mkdir -p "$LOG_DIR"
+mkdir -p "$RESULTS_DIR"
+
 # Output files
-LOG_FILE="$SCRIPT_DIR/${BINARY_BASENAME}_headless_analysis.log"
-JSON_OUTPUT_FILE="$SCRIPT_DIR/${BINARY_BASENAME}_taint_analysis_results.json"
+LOG_FILE="$LOG_DIR/${BINARY_BASENAME}_headless_analysis.log"
+JSON_OUTPUT_FILE="$RESULTS_DIR/${BINARY_BASENAME}_taint_analysis_results.json"
 
 
 # --- Pre-flight Checks ---
