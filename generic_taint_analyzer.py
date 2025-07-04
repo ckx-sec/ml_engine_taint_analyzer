@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # analyze_mnn_taint_modular.py
 # Modularized version of the taint analysis script.
 # Analyzes taint propagation starting from the return value of calls to functions
@@ -712,6 +713,7 @@ class TaintAnalyzer:
     def run(self, target_keyword):
         self.println("INFO: Searching for functions, thunks, and call sites related to keyword '{}'".format(target_keyword))
 
+
         target_ext_funcs = []
         ext_funcs_iter = self.func_manager.getExternalFunctions()
         while ext_funcs_iter.hasNext():
@@ -720,19 +722,26 @@ class TaintAnalyzer:
                 target_ext_funcs.append(ext_func)
 
         if not target_ext_funcs:
-            self.printerr("ERROR: No external function found with keyword '{}'. Exiting.".format(target_keyword))
-            return
+            self.println("WARN: No external function found with keyword '{}'. Trying all functions...".format(target_keyword))
+            all_funcs_iter = self.func_manager.getFunctions(True)
+            while all_funcs_iter.hasNext():
+                func = all_funcs_iter.next()
+                if target_keyword in func.getName():
+                    target_ext_funcs.append(func)
+            if not target_ext_funcs:
+                self.printerr("ERROR: No function found with keyword '{}'. Exiting.".format(target_keyword))
+                return
 
         all_callable_targets = set(target_ext_funcs)
         for ext_func in target_ext_funcs:
-            self.println("INFO: Found external function '{}'. Searching for its thunks.".format(ext_func.getName()))
+            self.println("INFO: Found function '{}'. Searching for its thunks.".format(ext_func.getName()))
             all_funcs_iter = self.func_manager.getFunctions(True)
             while all_funcs_iter.hasNext():
                 f = all_funcs_iter.next()
                 if f.isThunk():
                     thunked_func = f.getThunkedFunction(True)
                     if thunked_func and thunked_func.equals(ext_func):
-                        self.println("INFO: Found thunk '{}' at {} for external function.".format(f.getName(), f.getEntryPoint()))
+                        self.println("INFO: Found thunk '{}' at {} for function.".format(f.getName(), f.getEntryPoint()))
                         all_callable_targets.add(f)
 
         all_call_sites = set()
@@ -749,7 +758,7 @@ class TaintAnalyzer:
         self.println("INFO: Found {} unique call sites. Analyzing each...".format(len(all_call_sites)))
         
         for call_site_addr in sorted(list(all_call_sites), key=lambda addr: addr.getOffset()):
-            self.println("\\n--- Analyzing Call Site #{} at {} ---".format(call_site_addr.getOffset(), call_site_addr))
+            self.println("\n--- Analyzing Call Site #{} at {} ---".format(call_site_addr.getOffset(), call_site_addr))
             
             parent_func = self.func_manager.getFunctionContaining(call_site_addr)
             if not parent_func:
@@ -789,7 +798,7 @@ class TaintAnalyzer:
 
             current_initial_taint_source_hv_set = {output_hv}
             
-            self.println("\\n--- Initiating Taint Analysis for: {} (call at {}) ---".format(parent_func.getName(), call_site_addr))
+            self.println("\n--- Initiating Taint Analysis for: {} (call at {}) ---".format(parent_func.getName(), call_site_addr))
             self.println("DEBUG: Taint source is the return value of the call: {}".format(self._get_varnode_representation(output_hv, high_parent_func)))
 
             self._trace_taint_in_function(
@@ -801,7 +810,7 @@ class TaintAnalyzer:
         if not all_call_sites: 
             self.println("INFO: No call sites processed for keyword '{}'.".format(target_keyword))
 
-        self.println("\\n--- Taint Analysis Run Complete ---")
+        self.println("\n--- Taint Analysis Run Complete ---")
         if self.all_tainted_usages:
             self._print_results()
             self._save_results_to_json()

@@ -2,6 +2,31 @@
 # An MNN-specific taint analysis script that uses the generic taint engine.
 # It defines MNN-specific heuristics and injects them into the generic analyzer.
 
+# Ghidra Script Boilerplate
+try:
+    _current_program = currentProgram
+    _current_address = currentAddress
+    _monitor = monitor
+    _println = println
+    _printerr = printerr
+    _askFile = askFile
+except NameError:
+    # This block is for developing outside Ghidra, e.g., with ghidra_bridge.
+    # It should not be reached in headless mode.
+    import sys
+    _current_program = None
+    _current_address = None
+    _monitor = None
+    _println = lambda msg: sys.stdout.write(str(msg) + "\n")
+    _printerr = lambda msg: sys.stderr.write(str(msg) + "\n")
+    _askFile = None
+    # Add script directory to path to allow importing our modules
+    import os
+    # Assuming the script is in the same directory as generic_taint_analyzer
+    sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+
+from generic_taint_analyzer import TaintAnalyzer
+
 import sys
 
 # Attempt to import the generic analyzer.
@@ -98,12 +123,6 @@ def run_analysis_from_ghidra_ui():
     This function is the main entry point when run from Ghidra's UI.
     It sets up the environment and kicks off the analysis.
     """
-    _current_program = globals().get('currentProgram')
-    _monitor = globals().get('monitor')
-    _println = globals().get('println')
-    _printerr = globals().get('printerr')
-    _askFile = globals().get('askFile')
-
     if not all((_current_program, _monitor, _println, _printerr, _askFile)):
         sys.stderr.write("Error: This script must be run within a full Ghidra UI environment.\n")
         return
@@ -126,7 +145,7 @@ def run_analysis_from_ghidra_ui():
 
     except Exception as e:
         import traceback
-        _effective_printerr = _printerr if _printerr else lambda msg: sys.stderr.write(str(msg) + "\\n")
+        _effective_printerr = _printerr if _printerr else lambda msg: sys.stderr.write(str(msg) + "\n")
         _effective_printerr("An unhandled error occurred during TaintAnalyzer setup or execution:")
         _effective_printerr(str(e))
         try:

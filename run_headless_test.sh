@@ -3,12 +3,16 @@
 # ==============================================================================
 # Headless Ghidra Taint Analysis Test Script
 #
-# This script automates the process of running the MNN taint analysis script
+# This script automates the process of running a taint analysis script
 # on a target binary using Ghidra's headless analyzer. It creates a temporary
 # Ghidra project for each run and cleans it up afterwards.
 #
 # Usage:
-#   ./run_headless_test.sh
+#   ./run_headless_test.sh <analysis_script.py> <path_to_binary>
+#
+# Example:
+#   ./run_headless_test.sh mnn_analyzer.py sample/emotion_ferplus_mnn
+#   ./run_headless_test.sh onnxruntime_analyzer.py sample/emotion_ferplus_onnxruntime
 #
 # ==============================================================================
 
@@ -21,18 +25,25 @@ GHIDRA_HEADLESS_PATH="/Applications/ghidra_11.0.3_PUBLIC/support/analyzeHeadless
 # The directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# The binary to be analyzed
-TARGET_BINARY="$SCRIPT_DIR/emotion_ferplus_mnn"
+# --- Script Arguments ---
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <analysis_script.py> <path_to_binary>"
+    echo "Example: $0 mnn_analyzer.py sample/emotion_ferplus_mnn"
+    exit 1
+fi
 
-# The analysis script to run (must be in the SCRIPT_DIR)
-ANALYSIS_SCRIPT="mnn_analyzer.py"
+ANALYSIS_SCRIPT="$1"
+TARGET_BINARY_PATH="$2"
 
 # Ghidra project name (the parent directory will be temporary)
 GHIDRA_PROJECT_NAME="HeadlessTaintAnalysis"
 
+# Extract the basename of the binary to use in output filenames
+BINARY_BASENAME=$(basename "$TARGET_BINARY_PATH")
+
 # Output files
-LOG_FILE="$SCRIPT_DIR/headless_analysis.log"
-JSON_OUTPUT_FILE="$SCRIPT_DIR/taint_analysis_results.json"
+LOG_FILE="$SCRIPT_DIR/${BINARY_BASENAME}_headless_analysis.log"
+JSON_OUTPUT_FILE="$SCRIPT_DIR/${BINARY_BASENAME}_taint_analysis_results.json"
 
 
 # --- Pre-flight Checks ---
@@ -42,8 +53,8 @@ if [ ! -f "$GHIDRA_HEADLESS_PATH" ]; then
     exit 1
 fi
 
-if [ ! -f "$TARGET_BINARY" ]; then
-    echo "ERROR: Target binary not found at '$TARGET_BINARY'"
+if [ ! -f "$TARGET_BINARY_PATH" ]; then
+    echo "ERROR: Target binary not found at '$TARGET_BINARY_PATH'"
     exit 1
 fi
 
@@ -69,7 +80,7 @@ trap cleanup EXIT
 # --- Main Execution ---
 echo "Starting headless Ghidra taint analysis..."
 echo "  - Temp Ghidra Project: $TMP_GHIDRA_PROJECT_DIR/$GHIDRA_PROJECT_NAME"
-echo "  - Target Binary:       $TARGET_BINARY"
+echo "  - Target Binary:       $TARGET_BINARY_PATH"
 echo "  - Analysis Script:     $ANALYSIS_SCRIPT"
 echo "  - Log File:            $LOG_FILE"
 echo "  - JSON Output:         $JSON_OUTPUT_FILE"
@@ -85,7 +96,7 @@ export TAINT_ANALYSIS_JSON_OUTPUT="$JSON_OUTPUT_FILE"
 # Run the headless analyzer
 echo "Running analyzeHeadless... This may take a few minutes."
 "$GHIDRA_HEADLESS_PATH" "$TMP_GHIDRA_PROJECT_DIR" "$GHIDRA_PROJECT_NAME" \
-    -import "$TARGET_BINARY" \
+    -import "$TARGET_BINARY_PATH" \
     -scriptPath "$SCRIPT_DIR" \
     -postScript "$ANALYSIS_SCRIPT" \
     -log "$LOG_FILE" \
