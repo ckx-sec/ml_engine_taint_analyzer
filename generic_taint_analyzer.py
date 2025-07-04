@@ -26,10 +26,11 @@ class TaintAnalyzer:
     MAX_RECURSION_DEPTH = 5
     UNRESOLVED_CALL_EXPLORE_BUDGET = 3
 
-    def __init__(self, current_program, monitor, println, printerr, askFile, rule_handlers=None):
+    def __init__(self, current_program, monitor, println, printerr, askFile, rule_handlers=None, aggressive_branch_filtering=False):
         """
         Initializes the analyzer with necessary Ghidra services and state.
         :param rule_handlers: A list of functions to handle special taint propagation rules.
+        :param aggressive_branch_filtering: If True, filters out tainted branches that are only dependent on CPU flags.
         """
         # Ghidra services
         self.current_program = current_program
@@ -48,6 +49,7 @@ class TaintAnalyzer:
         self.all_tainted_usages = []
         self.visited_function_states = set()
         self.rule_handlers = rule_handlers if rule_handlers else []
+        self.aggressive_branch_filtering = aggressive_branch_filtering
         
     def __del__(self):
         """
@@ -320,6 +322,21 @@ class TaintAnalyzer:
                         })
             
             if mnemonic in ["CALL", "CALLIND"]:
+                # --- [BEGIN] Tainted Memory Access Sink Detection ---
+                # Check if a tainted value is used as the target address for an indirect call
+                target_addr_vn = current_pcode_op.getInput(0)
+                target_addr_hv = target_addr_vn.getHigh() if target_addr_vn else None
+                if target_addr_hv and target_addr_hv in tainted_high_vars_in_current_func:
+                    self.all_tainted_usages.append({
+                        "originating_imported_function_name": originating_imported_func_name_for_log,
+                        "function_name": func_name, "function_entry": func_entry_addr.toString(),
+                        "address": current_op_address_str, "pcode_op_str": str(current_pcode_op),
+                        "usage_type": "TAINTED_INDIRECT_CALL_TARGET",
+                        "tainted_component_repr": self._get_varnode_representation(target_addr_hv, high_func_to_analyze),
+                        "details": "Tainted value used as the target for an indirect call."
+                    })
+                # --- [END] Tainted Memory Access Sink Detection ---
+
                 called_function_obj = self._get_called_function_from_pcode_op(current_pcode_op)
                 
                 if called_function_obj:
@@ -434,6 +451,7 @@ class TaintAnalyzer:
                             "details": "Tainted PCode args ({}) to {} ({}) cannot map to HighProto (count {}).".format(", ".join(tainted_arg_details_for_no_map), called_function_obj.getName(), mnemonic, num_formal_params)
                         })
                 else: # Unresolved call
+                    target_func_addr_vn = current_pcode_op.getInput(0)
                     potential_target_addr_to_explore = None; exploration_context_msg = ""
                     if target_func_addr_vn.isConstant():
                         try:
@@ -556,7 +574,8 @@ class TaintAnalyzer:
             "RETURN_TAINTED_VALUE",
             "TAINT_PROPAGATED_FROM_THUNK_CALL_RETURN",
             "TAINT_PROPAGATED_TO_THUNK_CALL_POINTER_ARG",
-            "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN"
+            "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN",
+            "TAINTED_MEMORY_ACCESS"
         ]
         cpu_flag_core_names = [
             "tmpcy", "ng", "zf", "cf", "of", "sf", "pf", 
@@ -568,21 +587,23 @@ class TaintAnalyzer:
             include_this_result = False
             if res["usage_type"] in included_usage_types:
                 include_this_result = True
-                if res["usage_type"] == "BRANCH_CONDITION_TAINTED":
-                    is_cpu_flag_component = False
-                    tainted_comp_repr = res.get("tainted_component_repr", "")
-                    lc_tainted_comp_repr = tainted_comp_repr.lower()
-                    for flag_name in cpu_flag_core_names:
-                        if "({}".format(flag_name) in lc_tainted_comp_repr and lc_tainted_comp_repr.endswith(")"):
-                            last_paren_open_idx = lc_tainted_comp_repr.rfind('(')
-                            if last_paren_open_idx != -1 and lc_tainted_comp_repr[-1] == ')':
-                                content_in_paren = lc_tainted_comp_repr[last_paren_open_idx+1:-1]
-                                if content_in_paren == flag_name:
-                                    is_cpu_flag_component = True; break
-                        if lc_tainted_comp_repr == flag_name:
-                            is_cpu_flag_component = True; break
-                    if is_cpu_flag_component:
-                        include_this_result = False
+            
+            if self.aggressive_branch_filtering and res["usage_type"] == "BRANCH_CONDITION_TAINTED":
+                is_cpu_flag_component = False
+                tainted_comp_repr = res.get("tainted_component_repr", "")
+                lc_tainted_comp_repr = tainted_comp_repr.lower()
+                for flag_name in cpu_flag_core_names:
+                    if "({}".format(flag_name) in lc_tainted_comp_repr and lc_tainted_comp_repr.endswith(")"):
+                        last_paren_open_idx = lc_tainted_comp_repr.rfind('(')
+                        if last_paren_open_idx != -1 and lc_tainted_comp_repr[-1] == ')':
+                            content_in_paren = lc_tainted_comp_repr[last_paren_open_idx+1:-1]
+                            if content_in_paren == flag_name:
+                                is_cpu_flag_component = True; break
+                    if lc_tainted_comp_repr == flag_name:
+                        is_cpu_flag_component = True; break
+                if is_cpu_flag_component:
+                    include_this_result = False
+            
             if include_this_result:
                 filtered_results_to_print.append(res)
 
@@ -651,7 +672,8 @@ class TaintAnalyzer:
             "TAINTED_ARG_TO_UNRESOLVED_CALL", "EXPLORING_INITIALLY_UNRESOLVED_CALL", 
             "RETURN_TAINTED_VALUE", "TAINT_PROPAGATED_FROM_THUNK_CALL_RETURN",
             "TAINT_PROPAGATED_TO_THUNK_CALL_POINTER_ARG",
-            "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN"
+            "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN",
+            "TAINTED_MEMORY_ACCESS"
         ]
         cpu_flag_core_names_for_json = [
             "tmpcy", "ng", "zf", "cf", "of", "sf", "pf", "tmpnz", "tmpov", "tmpca", "af", 
@@ -664,21 +686,23 @@ class TaintAnalyzer:
             current_usage_type = usage.get("usage_type")
             if current_usage_type in included_usage_types_for_json:
                 should_include_this_usage = True
-                if current_usage_type == "BRANCH_CONDITION_TAINTED":
-                    is_cpu_flag_component = False
-                    tainted_comp_repr = usage.get("tainted_component_repr", "")
-                    lc_tainted_comp_repr = tainted_comp_repr.lower()
-                    for flag_name in cpu_flag_core_names_for_json:
-                        if "({}".format(flag_name) in lc_tainted_comp_repr and lc_tainted_comp_repr.endswith(")"):
-                            last_paren_open_idx = lc_tainted_comp_repr.rfind('(')
-                            if last_paren_open_idx != -1 and lc_tainted_comp_repr[-1] == ')':
-                                content_in_paren = lc_tainted_comp_repr[last_paren_open_idx+1:-1]
-                                if content_in_paren == flag_name:
-                                    is_cpu_flag_component = True; break
-                        if lc_tainted_comp_repr == flag_name:
-                            is_cpu_flag_component = True; break
-                    if is_cpu_flag_component:
-                        should_include_this_usage = False
+            
+            if self.aggressive_branch_filtering and current_usage_type == "BRANCH_CONDITION_TAINTED":
+                is_cpu_flag_component = False
+                tainted_comp_repr = usage.get("tainted_component_repr", "")
+                lc_tainted_comp_repr = tainted_comp_repr.lower()
+                for flag_name in cpu_flag_core_names_for_json:
+                    if "({}".format(flag_name) in lc_tainted_comp_repr and lc_tainted_comp_repr.endswith(")"):
+                        last_paren_open_idx = lc_tainted_comp_repr.rfind('(')
+                        if last_paren_open_idx != -1 and lc_tainted_comp_repr[-1] == ')':
+                            content_in_paren = lc_tainted_comp_repr[last_paren_open_idx+1:-1]
+                            if content_in_paren == flag_name:
+                                is_cpu_flag_component = True; break
+                    if lc_tainted_comp_repr == flag_name:
+                        is_cpu_flag_component = True; break
+                if is_cpu_flag_component:
+                    should_include_this_usage = False
+
             if not should_include_this_usage: continue
 
             usage_entry_for_json = {

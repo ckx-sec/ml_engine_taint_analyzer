@@ -113,20 +113,20 @@ def run_analysis_from_ghidra_ui():
 
     analyzer = None
     try:
-        # Register the ONNX Runtime-specific rule handler with the generic analyzer.
-        onnx_rules = [onnxruntime_special_rule_handler]
-
+        # With the new strategy, we start tainting from the return of GetTensorData itself,
+        # so a special rule handler is no longer needed. The generic engine's default
+        # behavior (tainting the return value) is exactly what we want.
         analyzer = TaintAnalyzer(
             current_program=_current_program,
             monitor=_monitor,
             println=_println,
             printerr=_printerr,
             askFile=_askFile,
-            rule_handlers=onnx_rules
+            rule_handlers=[]  # No special rules needed for this strategy
         )
         
-        # The starting point for ONNX Runtime is the Run method of the Session object.
-        target_api_keyword = "::Run"
+        # New Strategy: Start tainting from the function that extracts the raw data pointer.
+        target_api_keyword = "GetTensorData"
         analyzer.run(target_api_keyword)
 
     except Exception as e:
