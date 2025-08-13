@@ -15,6 +15,204 @@ import traceback
 import sys
 import json
 import os
+import re
+
+# A list of common math functions that propagate taint from input to output.
+# If an input is tainted, the output should be tainted without recursion.
+_MATH_LIB_FUNCTIONS = {
+    "exp", "expf", "expm1", "expm1f",
+    "log", "logf", "log10", "log10f", "log1p", "log1pf", "log2", "log2f",
+    "sin", "sinf", "cos", "cosf", "tan", "tanf",
+    "asin", "asinf", "acos", "acosf", "atan", "atanf", "atan2", "atan2f",
+    "sinh", "sinhf", "cosh", "coshf", "tanh", "tanhf",
+    "asinh", "asinhf", "acosh", "acoshf", "atanh", "atanhf",
+    "sqrt", "sqrtf", "cbrt", "cbrtf",
+    "pow", "powf",
+    "fabs", "fabsf",
+    "floor", "floorf", "ceil", "ceilf", "round", "roundf", "trunc", "truncf",
+    "fmod", "fmodf"
+}
+
+def _memmove_rule_handler(analyzer, op_idx, all_pcode_ops, high_func, tainted_hvs, tainted_hvs_repr, origin_log_name):
+    """
+    Handles taint propagation through `memmove` (and similar functions like `memcpy`).
+    If the source buffer is tainted, this rule taints the destination buffer and stops
+    further recursion into `memmove` itself.
+    """
+    current_pcode_op = all_pcode_ops[op_idx]
+    if current_pcode_op.getMnemonic() not in ["CALL", "CALLIND"]:
+        return False
+
+    called_function_obj = analyzer._get_called_function_from_pcode_op(current_pcode_op)
+    if not called_function_obj or called_function_obj.getName() not in ["memmove", "memcpy"]:
+        return False
+
+    # Standard signature is (dest, src, size).
+    # P-code inputs are [call_target, dest, src, size]
+    if current_pcode_op.getNumInputs() < 3: # Need at least dest and src
+        return False
+
+    dest_vn = current_pcode_op.getInput(1)
+    src_vn = current_pcode_op.getInput(2)
+
+    src_hv = src_vn.getHigh() if src_vn else None
+    dest_hv = dest_vn.getHigh() if dest_vn else None
+
+    # Check if the source is tainted
+    if src_hv and src_hv in tainted_hvs:
+        analyzer.println("INFO: [RULE_{}] Detected call with tainted source: {}".format(
+            called_function_obj.getName().upper(),
+            analyzer._get_varnode_representation(src_hv, high_func)
+        ))
+
+        # Taint the destination if it's not already tainted
+        if dest_hv and dest_hv not in tainted_hvs:
+            tainted_hvs.add(dest_hv)
+            dest_hv_repr = analyzer._get_varnode_representation(dest_hv, high_func)
+            tainted_hvs_repr.add(dest_hv_repr)
+            
+            analyzer.println("INFO: [RULE_{}] Propagating taint to destination: {}".format(
+                called_function_obj.getName().upper(),
+                dest_hv_repr
+            ))
+            
+            # Log this special propagation
+            analyzer.all_tainted_usages.append({
+                "originating_imported_function_name": origin_log_name,
+                "function_name": high_func.getFunction().getName(),
+                "function_entry": high_func.getFunction().getEntryPoint().toString(),
+                "address": current_pcode_op.getSeqnum().getTarget().toString(),
+                "pcode_op_str": str(current_pcode_op),
+                "usage_type": "TAINT_PROPAGATED_BY_RULE",
+                "tainted_component_repr": dest_hv_repr,
+                "details": "Taint propagated from source ({}) to destination ({}) by {} rule.".format(
+                    analyzer._get_varnode_representation(src_hv, high_func),
+                    dest_hv_repr,
+                    called_function_obj.getName()
+                )
+            })
+
+        # This rule has handled the call, so don't do the default recursion.
+        return True
+
+    return False
+
+def _math_lib_rule_handler(analyzer, op_idx, all_pcode_ops, high_func, tainted_hvs, tainted_hvs_repr, origin_log_name):
+    """
+    Handles taint propagation through common math library functions.
+    If any input argument is tainted, this rule taints the return value and
+    stops further recursion into the math function itself.
+    """
+    current_pcode_op = all_pcode_ops[op_idx]
+    if current_pcode_op.getMnemonic() not in ["CALL", "CALLIND"]:
+        return False
+
+    called_function_obj = analyzer._get_called_function_from_pcode_op(current_pcode_op)
+    if not called_function_obj or called_function_obj.getName() not in _MATH_LIB_FUNCTIONS:
+        return False
+
+    # Check if any input argument is tainted.
+    is_any_arg_tainted = False
+    tainted_arg_reprs = []
+    # P-code inputs for a call are [call_target, arg1, arg2, ...]
+    for pcode_arg_idx in range(1, current_pcode_op.getNumInputs()):
+        arg_vn = current_pcode_op.getInput(pcode_arg_idx)
+        arg_hv = arg_vn.getHigh() if arg_vn else None
+        if arg_hv and arg_hv in tainted_hvs:
+            is_any_arg_tainted = True
+            tainted_arg_reprs.append(analyzer._get_varnode_representation(arg_hv, high_func))
+
+    if is_any_arg_tainted:
+        analyzer.println("INFO: [RULE_MATH] Detected call to '{}' with tainted argument(s): {}".format(
+            called_function_obj.getName(),
+            ", ".join(tainted_arg_reprs)
+        ))
+
+        # Taint the return value (output) of the call
+        output_vn = current_pcode_op.getOutput()
+        if output_vn:
+            output_hv = output_vn.getHigh()
+            if output_hv and output_hv not in tainted_hvs:
+                tainted_hvs.add(output_hv)
+                output_hv_repr = analyzer._get_varnode_representation(output_hv, high_func)
+                tainted_hvs_repr.add(output_hv_repr)
+                
+                analyzer.println("INFO: [RULE_MATH] Propagating taint to return value: {}".format(
+                    output_hv_repr
+                ))
+
+                # Log this special propagation
+                analyzer.all_tainted_usages.append({
+                    "originating_imported_function_name": origin_log_name,
+                    "function_name": high_func.getFunction().getName(),
+                    "function_entry": high_func.getFunction().getEntryPoint().toString(),
+                    "address": current_pcode_op.getSeqnum().getTarget().toString(),
+                    "pcode_op_str": str(current_pcode_op),
+                    "usage_type": "TAINT_PROPAGATED_BY_RULE",
+                    "tainted_component_repr": output_hv_repr,
+                    "details": "Taint propagated through math function '{}' from arg(s) ({}) to return value.".format(
+                        called_function_obj.getName(),
+                        ", ".join(tainted_arg_reprs)
+                    )
+                })
+        
+        # This rule has handled the call, so don't do the default recursion.
+        return True
+
+    return False
+
+def _deallocation_rule_handler(analyzer, op_idx, all_pcode_ops, high_func, tainted_hvs, tainted_hvs_repr, origin_log_name):
+    """
+    Handles taint termination for deallocation functions like `operator delete` or `free`.
+    If a tainted pointer is passed to be deallocated, this is a sink, and the path is terminated.
+    """
+    current_pcode_op = all_pcode_ops[op_idx]
+    if current_pcode_op.getMnemonic() not in ["CALL", "CALLIND"]:
+        return False
+
+    called_function_obj = analyzer._get_called_function_from_pcode_op(current_pcode_op)
+    if not called_function_obj:
+        return False
+
+    func_name = called_function_obj.getName()
+    # Keywords to identify deallocation functions. Catches "operator delete", "free", etc.
+    dealloc_keywords = ["delete", "free"] 
+    is_dealloc_call = any(keyword in func_name.lower() for keyword in dealloc_keywords)
+
+    if not is_dealloc_call:
+        return False
+
+    # Standard signature is (ptr). P-code inputs are [call_target, ptr]
+    if current_pcode_op.getNumInputs() < 2:
+        return False
+
+    ptr_vn = current_pcode_op.getInput(1)
+    ptr_hv = ptr_vn.getHigh() if ptr_vn else None
+
+    # Check if the pointer being deallocated is tainted
+    if ptr_hv and ptr_hv in tainted_hvs:
+        ptr_repr = analyzer._get_varnode_representation(ptr_hv, high_func)
+        analyzer.println("INFO: [RULE_DEALLOC] Tainted pointer {} is being deallocated by call to '{}'. Terminating path.".format(
+            ptr_repr,
+            func_name
+        ))
+
+        # Log this as a terminal sink
+        analyzer.all_tainted_usages.append({
+            "originating_imported_function_name": origin_log_name,
+            "function_name": high_func.getFunction().getName(),
+            "function_entry": high_func.getFunction().getEntryPoint().toString(),
+            "address": current_pcode_op.getSeqnum().getTarget().toString(),
+            "pcode_op_str": str(current_pcode_op),
+            "usage_type": "TAINTED_POINTER_DEALLOCATED",
+            "tainted_component_repr": ptr_repr,
+            "details": "Tainted pointer passed to deallocation function '{}', terminating taint propagation.".format(func_name)
+        })
+
+        # This rule has handled the call, so don't do the default recursion.
+        return True
+
+    return False
 
 class TaintAnalyzer:
     """
@@ -26,11 +224,12 @@ class TaintAnalyzer:
     MAX_RECURSION_DEPTH = 5
     UNRESOLVED_CALL_EXPLORE_BUDGET = 3
 
-    def __init__(self, current_program, monitor, println, printerr, askFile, rule_handlers=None, aggressive_branch_filtering=False):
+    def __init__(self, current_program, monitor, println, printerr, askFile, rule_handlers=None, aggressive_branch_filtering=False, report_all_usage_types=False):
         """
         Initializes the analyzer with necessary Ghidra services and state.
         :param rule_handlers: A list of functions to handle special taint propagation rules.
         :param aggressive_branch_filtering: If True, filters out tainted branches that are only dependent on CPU flags.
+        :param report_all_usage_types: If True, all usage types will be printed and saved, ignoring the default filter.
         """
         # Ghidra services
         self.current_program = current_program
@@ -45,11 +244,39 @@ class TaintAnalyzer:
         self.decompiler.setOptions(options)
         self.decompiler.openProgram(self.current_program)
 
+        # Define which usage types are reported by default.
+        # This allows selective reporting for different analysis stages.
+        self.default_usage_types_to_report = {
+            "TAINTED_ARG_TO_CALL_RECURSION",
+            "TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS",
+            "TAINTED_ARG_TO_EXPLORED_CALL_NO_PARAM_MAP",
+            "TAINTED_ARG_TO_UNRESOLVED_CALL",
+            "EXPLORING_INITIALLY_UNRESOLVED_CALL", 
+            "RETURN_TAINTED_VALUE",
+            "TAINT_PROPAGATED_FROM_THUNK_CALL_RETURN",
+            "TAINT_PROPAGATED_TO_THUNK_CALL_POINTER_ARG",
+            "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN",
+            "TAINTED_MEMORY_ACCESS",
+            "TAINTED_POINTER_DEALLOCATED"
+        }
+        self.decompiler_timeout_secs = 60
+
+        # Define which usage types are reported by default.
+        # This allows selective reporting for different analysis stages.
+        self.all_usage_types = self.default_usage_types_to_report.union({
+            "BRANCH_CONDITION_TAINTED",
+            "TAINTED_COMPARISON"
+        })
+
         # Analysis state
         self.all_tainted_usages = []
         self.visited_function_states = set()
-        self.rule_handlers = rule_handlers if rule_handlers else []
+        self.rule_handlers = [_memmove_rule_handler, _math_lib_rule_handler, _deallocation_rule_handler] # Add the built-in memmove and math handlers
+        if rule_handlers:
+            self.rule_handlers.extend(rule_handlers) # Add any user-provided handlers
         self.aggressive_branch_filtering = aggressive_branch_filtering
+        self.pending_analysis_tasks = []
+        self.report_all_usage_types = report_all_usage_types
         
     def __del__(self):
         """
@@ -62,6 +289,194 @@ class TaintAnalyzer:
     # -------------------
     # Helper/Utility Methods (formerly global functions)
     # -------------------
+    def cleanup_operand_repr(self, repr_str):
+        """
+        Cleans up the string representation of a varnode or operand for cleaner output.
+        - Extracts register names like "w19" from "iVar1_4(w19)".
+        - Extracts constants like "0x60" from "UnnamedHighVar(Constant: 0x60".
+        - Removes surrounding parentheses or other artifacts.
+        """
+        if not hasattr(self, 're'):
+            import re
+            self.re = re
+
+        s = str(repr_str)
+
+        # 1. Look for register names like w19, x21, s2, d7 (e.g., from "puVar13(x21)")
+        match = self.re.search(r'\(([wxsd]\d+)\)', s)
+        if match:
+            return match.group(1)
+            
+        # 2. Look for hexadecimal constants (e.g., from "UnnamedHighVar(Constant: 0x60")
+        match = self.re.search(r'Constant: (0x[0-9a-fA-F]+)', s)
+        if match:
+            return match.group(1)
+
+        # 3. Fallback for simple cases like "0x60)" or "#0x10"
+        s = s.strip()
+        
+        if s.startswith('#'):
+            s = s[1:]
+        
+        return s
+
+    def _get_stack_offset_from_varnode_recursive(self, varnode, high_func, recursion_depth=0, max_depth=5):
+        """
+        Recursively trace a varnode back to its origin to find if it's derived
+        from a stack variable.
+        """
+        self.println("  - [STACK_SEARCH.{}] Analyzing varnode: {}".format(recursion_depth, varnode))
+
+        if not varnode or recursion_depth >= max_depth:
+            self.println("  - [STACK_SEARCH.{}] Max depth or null varnode. Aborting.".format(recursion_depth))
+            return None
+
+        # Case 1: The varnode itself is a direct stack address.
+        addr = varnode.getAddress()
+        self.println("  - [STACK_SEARCH.{}] Details: isAddress={}, addr={}, isStackAddress={}".format(
+            recursion_depth,
+            varnode.isAddress(),
+            addr,
+            addr.isStackAddress() if addr else "N/A"
+        ))
+        if addr is not None and addr.isStackAddress():
+            offset = addr.getOffset()
+            self.println("  - [STACK_SEARCH.{}] SUCCESS (Direct): Varnode is a direct stack address with offset {:#x}.".format(recursion_depth, offset))
+            return offset
+
+        def_op = varnode.getDef()
+        if not def_op:
+            self.println("  - [STACK_SEARCH.{}] No defining p-code op found. Aborting path.".format(recursion_depth))
+            return None
+
+        mnemonic = def_op.getMnemonic()
+        self.println("  - [STACK_SEARCH.{}] Def P-Code Op: {}".format(recursion_depth, def_op))
+        
+        # Case 2: Base case - An operation relative to the stack pointer (SP) or frame pointer (FP).
+        if mnemonic in ["PTRADD", "PTRSUB"]:
+            sp_reg = self.current_program.getCompilerSpec().getStackPointer()
+            fp_reg = None
+            lang_id_str = self.current_program.getLanguageID().getIdAsString().lower()
+            if 'aarch64' in lang_id_str:
+                fp_reg = self.current_program.getRegister("x29")
+            elif 'x86' in lang_id_str:
+                fp_reg = self.current_program.getRegister("rbp") if '64' in lang_id_str else self.current_program.getRegister("ebp")
+
+            stack_base_regs = [r.getAddress() for r in [sp_reg, fp_reg] if r is not None]
+
+            # Handle 3-input PTRADD for array-like access: base + index * scale
+            if mnemonic == "PTRADD" and def_op.getNumInputs() == 3:
+                base_vn = def_op.getInput(0)
+                index_vn = def_op.getInput(1)
+                scale_vn = def_op.getInput(2)
+                if index_vn.isConstant() and scale_vn.isConstant():
+                    base_offset = self._get_stack_offset_from_varnode_recursive(base_vn, high_func, recursion_depth + 1, max_depth)
+                    if base_offset is not None:
+                        const_offset = index_vn.getOffset() * scale_vn.getOffset()
+                        final_offset = base_offset + const_offset
+                        self.println("  - [STACK_SEARCH.{}] SUCCESS (PTRADD3): Found stack base {:#x} with offset {:#x} -> final offset {:#x}.".format(recursion_depth, base_offset, const_offset, final_offset))
+                        return final_offset
+
+            # Handle 2-input PTRADD/PTRSUB
+            base_ptr_vn = def_op.getInput(0)
+            offset_vn = def_op.getInput(1)
+
+            # Heuristic 2.1: Check for OP(base, const) where base is SP or FP.
+            if base_ptr_vn.isRegister() and base_ptr_vn.getAddress() in stack_base_regs and offset_vn.isConstant():
+                offset = offset_vn.getOffset()
+                self.println("  - [STACK_SEARCH.{}] SUCCESS (Base Ptr): Found {} with stack base and offset {:#x}.".format(recursion_depth, mnemonic, offset))
+                return offset
+
+            # Heuristic 2.2: Check for PTRADD(const, base) where base is SP or FP.
+            if mnemonic == "PTRADD" and offset_vn.isRegister() and offset_vn.getAddress() in stack_base_regs and base_ptr_vn.isConstant():
+                offset = base_ptr_vn.getOffset()
+                self.println("  - [STACK_SEARCH.{}] SUCCESS (Base Ptr): Found {} with stack base and offset {:#x}.".format(recursion_depth, mnemonic, offset))
+                return base_ptr_vn.getOffset()
+
+            # Heuristic 2.3 (Enhanced): Recursively check if the base of the PTRADD/PTRSUB is itself a stack address.
+            if offset_vn.isConstant():
+                base_offset = self._get_stack_offset_from_varnode_recursive(base_ptr_vn, high_func, recursion_depth + 1, max_depth)
+                if base_offset is not None:
+                    # We need to handle signed offsets correctly from the constant varnode.
+                    const_val = offset_vn.getOffset()
+                    if const_val > 0x7FFFFFFFFFFFFFFF: # Simple check for large unsigned as negative
+                       const_val = const_val - 0x10000000000000000
+                    
+                    final_offset = 0
+                    if mnemonic == "PTRADD":
+                        final_offset = base_offset + const_val
+                    else: # PTRSUB
+                        final_offset = base_offset - const_val
+                    
+                    self.println("  - [STACK_SEARCH.{}] SUCCESS (Recursive Base): Found {} with recursive stack base {:#x} and offset {:#x} -> final offset {:#x}.".format(recursion_depth, mnemonic, base_offset, const_val, final_offset))
+                    return final_offset
+
+        # Case 3: Recursive step for ops that pass through a value (e.g., COPY, CAST).
+        # NEW: Also treat INDIRECT as a passthrough for taint purposes.
+        if mnemonic in ["COPY", "CAST", "INDIRECT"]:
+            self.println("  - [STACK_SEARCH.{}] Recursing through {}...".format(recursion_depth, mnemonic))
+            return self._get_stack_offset_from_varnode_recursive(def_op.getInput(0), high_func, recursion_depth + 1, max_depth)
+        
+        # Case 4: Recursive step for control-flow joins (MULTIEQUAL).
+        if mnemonic == "MULTIEQUAL":
+            self.println("  - [STACK_SEARCH.{}] Recursing through MULTIEQUAL...".format(recursion_depth))
+            # Check all branches of the MULTIEQUAL. If any path leads to a stack offset, use it.
+            for i in range(def_op.getNumInputs()):
+                result = self._get_stack_offset_from_varnode_recursive(def_op.getInput(i), high_func, recursion_depth + 1, max_depth)
+                if result is not None:
+                    self.println("  - [STACK_SEARCH.{}] SUCCESS (MultiEqual): Found stack offset {:#x} in one of the branches.".format(recursion_depth, result))
+                    return result
+
+        self.println("  - [STACK_SEARCH.{}] Mnemonic '{}' is not a handled case. Aborting path.".format(recursion_depth, mnemonic))
+        return None
+
+    def _is_varnode_tainted_recursive(self, varnode, high_func, tainted_hvs, visited_ops=None):
+        """
+        Recursively checks if a varnode is tainted, traversing through COPY and MULTIEQUAL ops.
+        """
+        if visited_ops is None:
+            visited_ops = set()
+
+        # Base case 1: Direct high variable is tainted
+        hv = varnode.getHigh()
+        if hv and hv in tainted_hvs:
+            return True
+            
+        # Base case 2: Representative varnode's high variable is tainted (handles aliasing)
+        if hv:
+            rep_vn = hv.getRepresentative()
+            if rep_vn:
+                rep_hv = rep_vn.getHigh()
+                if rep_hv and rep_hv in tainted_hvs:
+                    return True
+
+        def_op = varnode.getDef()
+        if not def_op or def_op.getSeqnum() in visited_ops:
+            return False
+
+        visited_ops.add(def_op.getSeqnum())
+        mnemonic = def_op.getMnemonic()
+
+        # Recursive step for ops that pass through a value
+        if mnemonic in ["COPY", "CAST"]:
+            return self._is_varnode_tainted_recursive(def_op.getInput(0), high_func, tainted_hvs, visited_ops)
+        
+        # Recursive step for control-flow joins
+        if mnemonic == "MULTIEQUAL":
+            for i in range(def_op.getNumInputs()):
+                if self._is_varnode_tainted_recursive(def_op.getInput(i), high_func, tainted_hvs, visited_ops):
+                    return True
+        
+        # NEW: Recursive step for LOAD operations
+        if mnemonic == "LOAD":
+            # The value is loaded from the address specified in the second input
+            addr_vn = def_op.getInput(1)
+            # Check if the address itself is tainted
+            if self._is_varnode_tainted_recursive(addr_vn, high_func, tainted_hvs, visited_ops):
+                return True
+
+        return False
+
     def _get_varnode_representation(self, varnode_obj, high_function_context):
         if varnode_obj is None: return "None"
         if high_function_context:
@@ -94,7 +509,7 @@ class TaintAnalyzer:
                         elif rep_vn.isUnique():
                             storage_info_str = "UniquePcode[0x{:x}]".format(rep_vn.getOffset())
                         elif rep_vn.isConstant():
-                            storage_info_str = "Constant"
+                            storage_info_str = "Constant: 0x{:x}".format(rep_vn.getOffset())
                         elif rep_vn.getAddress() is not None and rep_vn.getAddress().isMemoryAddress() and not rep_vn.getAddress().isStackAddress():
                              storage_info_str = "GlobalMem[{}]".format(rep_vn.getAddress().toString(True))
                     if storage_info_str is None and isinstance(actual_high_var_target, ghidra.program.model.pcode.HighOther):
@@ -108,7 +523,7 @@ class TaintAnalyzer:
             reg = self.current_program.getLanguage().getRegister(varnode_obj.getAddress(), varnode_obj.getSize())
             return reg.getName() if reg else "reg_vn:{}".format(varnode_obj.getAddress())
         if varnode_obj.isConstant():
-            return "const_vn:0x{:x}".format(varnode_obj.getOffset())
+            return "Constant: 0x{:x}".format(varnode_obj.getOffset())
         if varnode_obj.getAddress() is not None and varnode_obj.getAddress().isStackAddress():
             return "stack_vn_direct:{}".format(varnode_obj.getAddress().toString(True))
         if varnode_obj.isUnique():
@@ -178,9 +593,8 @@ class TaintAnalyzer:
     # -------------------
     # Core Taint Tracing Logic (as a method)
     # -------------------
-    def _trace_taint_in_function(self, high_func_to_analyze, initial_tainted_hvs, pcode_op_start_taint,
-                                originating_imported_func_name_for_log, current_depth=0,
-                                sub_recursion_budget=None, current_sub_depth=0):
+    def _trace_taint_in_function(self, high_func_to_analyze, initial_tainted_hvs, pcode_op_start_taint, originating_imported_func_name_for_log, current_depth=0,
+                                sub_recursion_budget=None, current_sub_depth=0, analysis_config=None, initial_tainted_stack_offsets=None, tainted_memory_regions=None):
         if current_depth > self.MAX_RECURSION_DEPTH:
             self.println("DEBUG: Max recursion depth ({}) reached.".format(self.MAX_RECURSION_DEPTH))
             return
@@ -223,6 +637,30 @@ class TaintAnalyzer:
 
         tainted_high_vars_in_current_func = set(initial_tainted_hvs)
         tainted_high_var_representations_in_current_func = set()
+        tainted_stack_offsets = set(initial_tainted_stack_offsets) if initial_tainted_stack_offsets else set()
+        if tainted_memory_regions is None:
+            tainted_memory_regions = set()
+
+        # NEW: Proactively find and taint stack offsets from the initial set of tainted HighVariables.
+        # This is crucial for catching cases where a tainted pointer (not just the stack pointer)
+        # is used to access the stack.
+        for hv in list(tainted_high_vars_in_current_func): # Use a copy to modify the set during iteration
+            # Representative varnode is the best chance to get a concrete definition
+            vn = hv.getRepresentative()
+            if vn:
+                stack_offset = self._get_stack_offset_from_varnode_recursive(vn, high_func_to_analyze)
+                if stack_offset is not None:
+                    if stack_offset not in tainted_stack_offsets:
+                        tainted_stack_offsets.add(stack_offset)
+                        self.println("DEBUG: [STACK_RULE] Proactively tainted stack offset {:#x} from initial HighVar: {}".format(
+                            stack_offset, self._get_varnode_representation(hv, high_func_to_analyze)
+                        ))
+
+        if tainted_stack_offsets:
+            self.println("DEBUG: [STACK_TAINTS] Initial tainted stack offsets for this function: {}".format(
+                [hex(offset) for offset in tainted_stack_offsets]
+            ))
+
         for hv_init in initial_tainted_hvs:
             tainted_high_var_representations_in_current_func.add(
                 self._get_varnode_representation(hv_init, high_func_to_analyze)
@@ -253,42 +691,110 @@ class TaintAnalyzer:
             current_op_address = current_pcode_op.getSeqnum().getTarget()
             current_op_address_str = current_op_address.toString()
             
+            # --- DEBUG ---
+            try:
+                current_addr_val = int(current_op_address_str, 16)
+                if 0x18c7e4 <= current_addr_val <= 0x18c7fc:
+                    self.println("DEBUG IR @ {}: {}".format(current_op_address_str, current_pcode_op))
+            except ValueError:
+                pass # Ignore if address string is not a valid hex number
+            # --- END DEBUG ---
+            
             output_vn = current_pcode_op.getOutput()
             output_hv = output_vn.getHigh() if output_vn else None
             mnemonic = current_pcode_op.getMnemonic()
 
+            # Taint propagation through CBRANCH
             if mnemonic == "CBRANCH":
                 condition_vn = current_pcode_op.getInput(1)
-                condition_hv = condition_vn.getHigh() if condition_vn else None
-                condition_is_tainted = False; condition_hv_repr = "N/A"
-                if condition_hv:
-                    condition_hv_repr = self._get_varnode_representation(condition_hv, high_func_to_analyze)
-                    if (condition_hv in tainted_high_vars_in_current_func or condition_hv_repr in tainted_high_var_representations_in_current_func): condition_is_tainted = True
-                if condition_is_tainted:
-                    details_cbranch = "Tainted condition for branch."; compared_ops_repr = ["N/A", "N/A"]
-                    def_op_cond = condition_vn.getDef()
-                    if def_op_cond and def_op_cond.getNumInputs() >= 2 and def_op_cond.getMnemonic() in ["INT_EQUAL", "INT_NOTEQUAL", "INT_LESS", "INT_SLESS", "INT_LESSEQUAL", "INT_SLESSEQUAL", "FLOAT_EQUAL", "FLOAT_NOTEQUAL", "FLOAT_LESS", "FLOAT_LESSEQUAL", "BOOL_AND", "BOOL_OR"]:
-                        op1_vn_cond = def_op_cond.getInput(0); op2_vn_cond = def_op_cond.getInput(1)
-                        compared_ops_repr = [self._get_varnode_representation(op1_vn_cond, high_func_to_analyze), self._get_varnode_representation(op2_vn_cond, high_func_to_analyze)]
-                    skip_this_cbranch_report_due_to_assembly = False
-                    instruction_at_op = self.current_program.getListing().getInstructionAt(current_op_address)
-                    if instruction_at_op and instruction_at_op.getMnemonicString().lower() in ["cbz", "cbnz"]: skip_this_cbranch_report_due_to_assembly = True
-                    if not skip_this_cbranch_report_due_to_assembly:
-                        self.all_tainted_usages.append({
-                            "originating_imported_function_name": originating_imported_func_name_for_log,
-                            "function_name": func_name, "function_entry": func_entry_addr.toString(),
-                            "address": current_op_address_str, "pcode_op_str": str(current_pcode_op),
-                            "usage_type": "BRANCH_CONDITION_TAINTED", "tainted_component_repr": condition_hv_repr, 
-                            "compared_operands": compared_ops_repr, "details": details_cbranch
-                        })
-                        self.println("INFO: [{} @ {}] Taint reached CBRANCH. Operands: {}.".format(func_name, current_op_address_str, compared_ops_repr))
+                is_condition_tainted = self._is_varnode_tainted_recursive(
+                    condition_vn,
+                    high_func_to_analyze,
+                    tainted_high_vars_in_current_func
+                )
+                
+                # --- Find Comparison Operands ---
+                # Default to an empty list.
+                final_compared_ops = []
+                def_op_cond = condition_vn.getDef()
+                
+                # Try to find the defining comparison operation for the branch condition.
+                if def_op_cond and def_op_cond.getMnemonic() in ["INT_EQUAL", "INT_NOTEQUAL", "INT_SLESS", "INT_SLESSEQUAL", "INT_LESS", "INT_LESSEQUAL", "FLOAT_EQUAL", "FLOAT_NOTEQUAL", "FLOAT_LESS", "FLOAT_LESSEQUAL"]:
+                #if def_op_cond and def_op_cond.getMnemonic() in ["FLOAT_EQUAL", "FLOAT_NOTEQUAL", "FLOAT_LESS", "FLOAT_LESSEQUAL"]:
+                    self.println("DEBUG: [CBRANCH] Found defining op for condition: {}".format(def_op_cond))
+                    op1_vn = def_op_cond.getInput(0)
+                    op2_vn = def_op_cond.getInput(1)
+                    op1_repr = self._get_varnode_representation(op1_vn, high_func_to_analyze)
+                    op2_repr = self._get_varnode_representation(op2_vn, high_func_to_analyze)
+                    final_compared_ops = [op1_repr, op2_repr]
+                
+                # --- Create and Log the Usage Report ---
+                instruction_at_op = self.current_program.getListing().getInstructionAt(current_op_address)
+                
+                # --- Exclusion Rules for Branches ---
+                should_exclude_branch = False
 
+                # Rule 0: Filter out stack canary checks.
+                is_stack_canary_check = any("__stack_chk_guard" in op_repr for op_repr in final_compared_ops)
+                if is_stack_canary_check:
+                    should_exclude_branch = True
+                    self.println("INFO: [FILTER] Skipping branch at {} because it appears to be a stack canary check.".format(current_op_address_str))
+
+                if not should_exclude_branch and instruction_at_op:
+                    mnemonic_lower = instruction_at_op.getMnemonicString().lower()
+                    # Rule 1: Skip common, low-level branch instructions like 'cbz' and 'cbnz'.
+                    if mnemonic_lower in ["cbz", "cbnz"]:
+                        should_exclude_branch = True
+                        self.println("INFO: [FILTER] Skipping branch at {} from instruction '{}'.".format(current_op_address_str, mnemonic_lower))
+                    
+                    # Rule 2: (REMOVED) This rule was too aggressive and hid important results.
+                    # The original rule was:
+                    # if not should_exclude_branch:
+                    #     prev_instruction = instruction_at_op.getPrevious()
+                    #     if prev_instruction and prev_instruction.getMnemonicString().lower() == 'cmp':
+                    #         should_exclude_branch = True
+                    #         self.println("INFO: [FILTER] Skipping branch at {} because it is preceded by a 'cmp' instruction.".format(current_op_address_str))
+
+                # --- Log the Usage Report if Not Excluded ---
+                if not should_exclude_branch:
+                    self.all_tainted_usages.append({
+                        "originating_imported_function_name": originating_imported_func_name_for_log,
+                        "function_name": func_name,
+                        "function_entry": func_entry_addr.toString(),
+                        "address": current_op_address_str,
+                        "pcode_op_str": str(current_pcode_op),
+                        "usage_type": "BRANCH_CONDITION_TAINTED",
+                        "tainted_component_repr": self._get_varnode_representation(condition_vn, high_func_to_analyze),
+                        "compared_ops_repr": final_compared_ops, # Use the list directly
+                        "instruction_mnemonic": instruction_at_op.getMnemonicString() if instruction_at_op else "N/A",
+                        "details": "Tainted condition for branch."
+                    })
+                    # Also log to console for immediate feedback
+                    self.println("INFO: [{} @ {}] Taint reached CBRANCH. Operands: {}. ".format(
+                        func_name, current_op_address_str, final_compared_ops
+                    ))
+
+            # --- Sink Checks End ---
+
+            # Taint propagation through standard operations
             if mnemonic == "STORE":
                 stored_value_vn = current_pcode_op.getInput(2)
                 stored_value_hv = stored_value_vn.getHigh() if stored_value_vn else None
                 if stored_value_hv and stored_value_hv in tainted_high_vars_in_current_func:
                     dest_addr_vn = current_pcode_op.getInput(1)
-                    dest_hv = dest_addr_vn.getHigh() if dest_addr_vn else None
+                    dest_addr_hv = dest_addr_vn.getHigh() if dest_addr_vn else None
+
+                    # --- [BEGIN] NEW MEMORY REGION TAINTING LOGIC with ALIASING HEURISTIC ---
+                    if dest_addr_hv:
+                        if dest_addr_hv not in tainted_memory_regions:
+                            tainted_memory_regions.add(dest_addr_hv)
+                            self.println("DEBUG: [MEMORY_RULE] Tainting memory region pointed to by: {}".format(
+                                self._get_varnode_representation(dest_addr_hv, high_func_to_analyze)
+                            ))
+                        
+                        self._apply_aliasing_heuristic(dest_addr_hv, high_func_to_analyze, tainted_memory_regions)
+                    # --- [END] NEW MEMORY REGION TAINTING LOGIC with ALIASING HEURISTIC ---
+                    
                     usage_entry_store = {
                         "originating_imported_function_name": originating_imported_func_name_for_log,
                         "function_name": func_name, "function_entry": func_entry_addr.toString(),
@@ -296,8 +802,8 @@ class TaintAnalyzer:
                         "tainted_component_repr": self._get_varnode_representation(stored_value_vn, high_func_to_analyze),
                         "destination_repr": self._get_varnode_representation(dest_addr_vn, high_func_to_analyze)
                     }
-                    if dest_hv and dest_hv in current_func_input_param_hvs and dest_hv not in initial_tainted_hvs:
-                        details_store_term = "Tainted value stored into input parameter {} of {}. Path terminated.".format(self._get_varnode_representation(dest_hv, high_func_to_analyze), func_name)
+                    if dest_addr_hv and dest_addr_hv in current_func_input_param_hvs and dest_addr_hv not in initial_tainted_hvs:
+                        details_store_term = "Tainted value stored into input parameter {} of {}. Path terminated.".format(self._get_varnode_representation(dest_addr_hv, high_func_to_analyze), func_name)
                         usage_entry_store["usage_type"] = "TAINT_REACHED_INPUT_PARAMETER_TERMINATION"
                         usage_entry_store["details"] = details_store_term
                         self.all_tainted_usages.append(usage_entry_store)
@@ -311,15 +817,121 @@ class TaintAnalyzer:
             elif mnemonic == "RETURN":
                 if current_pcode_op.getNumInputs() > 1:
                     returned_value_vn = current_pcode_op.getInput(1)
-                    returned_value_hv = returned_value_vn.getHigh() if returned_value_vn else None
-                    if returned_value_hv and returned_value_hv in tainted_high_vars_in_current_func:
+                    
+                    # Determine if the return value is tainted using the new robust check.
+                    is_return_tainted = self._is_varnode_tainted_recursive(
+                        returned_value_vn,
+                        high_func_to_analyze,
+                        tainted_high_vars_in_current_func
+                    )
+
+                    self.println("DEBUG: [{} @ {}] Analyzing potential tainted RETURN with value: {} (Tainted: {})".format(
+                        func_name,
+                        current_op_address_str,
+                        self._get_varnode_representation(returned_value_vn, high_func_to_analyze),
+                        is_return_tainted
+                    ))
+                    
+                    # --- Enhanced Debugging Information ---
+                    if not is_return_tainted: # Only print detailed debug info if the check fails
+                        self.println("    [DEBUG] --- Taint Check Details (RETURN FAILED) ---")
+                        def_op_for_debug = returned_value_vn.getDef()
+                        def_op_str = "None"
+                        if def_op_for_debug:
+                            def_op_str = "{} at {}".format(str(def_op_for_debug), def_op_for_debug.getSeqnum().getTarget().toString())
+                        self.println("    [DEBUG]   > Return Varnode: {} (Size: {}, Def: {})".format(
+                            returned_value_vn.toString(),
+                            returned_value_vn.getSize(),
+                            def_op_str
+                        ))
+                        
+                        self.println("    [DEBUG]   > Currently Tainted HighVariables in this function:")
+                        if not tainted_high_vars_in_current_func:
+                            self.println("    [DEBUG]     - (empty set)")
+                        else:
+                            # Sort for consistent output
+                            sorted_tainted_hvs = sorted(
+                                list(tainted_high_vars_in_current_func), 
+                                key=lambda x: self._get_varnode_representation(x, high_func_to_analyze)
+                            )
+                            for idx, hv in enumerate(sorted_tainted_hvs):
+                                self.println("    [DEBUG]     {}. {}".format(idx + 1, self._get_varnode_representation(hv, high_func_to_analyze)))
+                        self.println("    [DEBUG] ---------------------------------")
+                    
+                    if is_return_tainted:
+                        instruction_at_op = self.current_program.getListing().getInstructionAt(current_op_address)
+                        tainted_comp_repr = self._get_varnode_representation(returned_value_vn, high_func_to_analyze)
                         self.all_tainted_usages.append({
                             "originating_imported_function_name": originating_imported_func_name_for_log,
                             "function_name": func_name, "function_entry": func_entry_addr.toString(),
                             "address": current_op_address_str, "pcode_op_str": str(current_pcode_op),
                             "usage_type": "RETURN_TAINTED_VALUE", 
-                            "tainted_component_repr": self._get_varnode_representation(returned_value_vn, high_func_to_analyze)
+                            "tainted_component_repr": tainted_comp_repr,
+                            "instruction_mnemonic": instruction_at_op.getMnemonicString() if instruction_at_op else "N/A"
                         })
+                        
+                        # Generate detailed log output for this event
+                        self.println("\n" + "="*20 + " TAINTED RETURN DETECTED " + "="*20)
+                        self.println("  - Taint Origin:    {}".format(originating_imported_func_name_for_log))
+                        self.println("  - Function:        {} (Depth: {})".format(high_func_to_analyze.getFunction().getPrototypeString(True, True), current_depth))
+                        self.println("  - Return Address:  {}".format(current_op_address_str))
+                        self.println("  - Instruction:     {}".format(instruction_at_op.toString()))
+                        self.println("  - Tainted Value:   {}".format(tainted_comp_repr))
+                        
+                        def_op = returned_value_vn.getDef()
+                        if def_op:
+                            self.println("  - Value defined by:  {} at {}".format(str(def_op), def_op.getSeqnum().getTarget().toString()))
+                        
+                        self.println("="*64 + "\n")
+
+                        # --- [BEGIN] Multi-Stage Analysis Task Creation ---
+                        # Find all call sites of the current function and queue them for the next stage of analysis.
+                        current_function_obj = high_func_to_analyze.getFunction()
+                        self.println("INFO: [MULTI-STAGE] Tainted return from '{}'. Finding call sites to continue analysis.".format(current_function_obj.getName()))
+                        
+                        call_site_refs = self.ref_manager.getReferencesTo(current_function_obj.getEntryPoint())
+                        
+                        for ref in call_site_refs:
+                            if not ref.getReferenceType().isCall():
+                                continue
+                                
+                            caller_func = self.func_manager.getFunctionContaining(ref.getFromAddress())
+                            if not caller_func:
+                                continue
+                                
+                            # Decompile the caller to find the exact call operation
+                            try:
+                                decompile_res_caller = self.decompiler.decompileFunction(caller_func, self.decompiler_timeout_secs, self.monitor)
+                                if decompile_res_caller and decompile_res_caller.getHighFunction():
+                                    high_caller_func = decompile_res_caller.getHighFunction()
+                                    
+                                    # Find the call op at the reference address
+                                    call_op_in_caller = None
+                                    op_iter_caller = high_caller_func.getPcodeOps(ref.getFromAddress())
+                                    while op_iter_caller.hasNext():
+                                        pcode_op = op_iter_caller.next()
+                                        if pcode_op.getMnemonic() in ["CALL", "CALLIND"]:
+                                            call_op_in_caller = pcode_op
+                                            break
+                                    
+                                    if call_op_in_caller and call_op_in_caller.getOutput():
+                                        output_hv = call_op_in_caller.getOutput().getHigh()
+                                        if output_hv:
+                                            new_task = {
+                                                "high_func_to_analyze": high_caller_func,
+                                                "initial_tainted_hvs": {output_hv},
+                                                "pcode_op_start_taint": call_op_in_caller,
+                                                "originating_imported_func_name_for_log": "tainted_return_from_{}".format(current_function_obj.getName()),
+                                                "analysis_config": analysis_config,
+                                                "tainted_memory_regions": set() # Start fresh for the new analysis path
+                                            }
+                                            self.pending_analysis_tasks.append(new_task)
+                                            self.println("INFO: [MULTI-STAGE] Queued new task to analyze caller '{}' starting from tainted return.".format(caller_func.getName()))
+
+                            except Exception as e:
+                                self.printerr("ERROR: [MULTI-STAGE] Failed to process call site at {} in {}: {}".format(ref.getFromAddress(), caller_func.getName(), e))
+                        # --- [END] Multi-Stage Analysis Task Creation ---
+
             
             if mnemonic in ["CALL", "CALLIND"]:
                 # --- [BEGIN] Tainted Memory Access Sink Detection ---
@@ -355,12 +967,42 @@ class TaintAnalyzer:
                     # First, check if any arguments are tainted.
                     is_any_arg_tainted = False
                     tainted_args_for_log = []
+                    tainted_arg_hvs = []
                     for pcode_arg_idx in range(1, current_pcode_op.getNumInputs()):
                         caller_arg_vn = current_pcode_op.getInput(pcode_arg_idx)
                         caller_arg_hv = caller_arg_vn.getHigh()
                         if caller_arg_hv and caller_arg_hv in tainted_high_vars_in_current_func:
                             is_any_arg_tainted = True
                             tainted_args_for_log.append(self._get_varnode_representation(caller_arg_hv, high_func_to_analyze))
+                            tainted_arg_hvs.append(caller_arg_hv)
+
+                    # --- [BEGIN] NEW TAINT OUT-DEGREE ANALYSIS ---
+                    # If a tainted value is passed to a function, assume it might taint any pointer arguments passed to the same function.
+                    if is_any_arg_tainted:
+                        for pcode_arg_idx in range(1, current_pcode_op.getNumInputs()):
+                            arg_vn = current_pcode_op.getInput(pcode_arg_idx)
+                            arg_hv = arg_vn.getHigh() if arg_vn else None
+                            
+                            # Check if this argument is a pointer and is NOT one of the already tainted arguments.
+                            if arg_hv and isinstance(arg_hv.getDataType(), Pointer) and arg_hv not in tainted_arg_hvs:
+                                # Heuristic: Does this pointer point to a local stack variable? (e.g. passing &my_vector)
+                                arg_def_op = arg_vn.getDef()
+                                if arg_def_op:
+                                    # This pattern often indicates taking the address of a local variable.
+                                    # e.g., (unique, 0x11f80, 8) PTRSUB (register, 0x8, 8) , (const, 0xffffffffffffffe0, 8)
+                                    if arg_def_op.getMnemonic() in ["PTRSUB", "PTRADD"] and arg_def_op.getInput(0).isRegister():
+                                        
+                                        # It's a pointer to a local, taint its memory region and potential aliases.
+                                        if arg_hv not in tainted_memory_regions:
+                                            tainted_memory_regions.add(arg_hv)
+                                            self.println("DEBUG: [OUT-DEGREE] Tainting memory region of {} due to call with other tainted args.".format(
+                                                self._get_varnode_representation(arg_hv, high_func_to_analyze)
+                                            ))
+                                            
+                                            # Also trigger the aliasing heuristic for this newly tainted region pointer.
+                                            self._apply_aliasing_heuristic(arg_hv, high_func_to_analyze, tainted_memory_regions)
+
+                    # --- [END] NEW TAINT OUT-DEGREE ANALYSIS ---
 
                     # If the call is to a thunk function and has tainted arguments, apply special taint propagation rules.
                     if called_function_obj.isExternal() and is_any_arg_tainted:
@@ -410,14 +1052,18 @@ class TaintAnalyzer:
                 
                 high_called_func = None
                 if called_function_obj: # Ensure we have a function object before trying to decompile
+                    #self.println("USER DEBUG: Attempting to decompile function: {}".format(called_function_obj.getName()))
                     try:
                         decompile_res_callee = self.decompiler.decompileFunction(called_function_obj, 60, self.monitor)
+                        #self.println("USER DEBUG: Decompilation result object: {}".format(decompile_res_callee))
                         if decompile_res_callee and decompile_res_callee.getHighFunction(): high_called_func = decompile_res_callee.getHighFunction()
                     except Exception as de: self.printerr("ERROR: Decompile callee {}: {}".format(called_function_obj.getName(), de))
                 
                 if high_called_func:
+                    #self.println("USER DEBUG: Entering 'if high_called_func' block for recursion.")
                     callee_func_proto = high_called_func.getFunctionPrototype()
-                    num_formal_params = callee_func_proto.getNumParams() if callee_func_proto else 0
+                    num_formal_params = callee_func_proto.getNumParams() if callee_func_proto else -1 # Use -1 to indicate no proto
+                    #self.println("USER DEBUG: [PARAM_MAP] Callee: {}, Prototype: {}, Num formal params: {}".format(high_called_func.getFunction().getName(), callee_func_proto, num_formal_params))
                     newly_tainted_callee_hvs = set()
                     tainted_arg_details_for_no_map = []
                     for pcode_arg_idx in range(1, current_pcode_op.getNumInputs()): 
@@ -425,15 +1071,26 @@ class TaintAnalyzer:
                         caller_arg_hv = caller_arg_vn.getHigh()
                         if caller_arg_hv and caller_arg_hv in tainted_high_vars_in_current_func:
                             conceptual_arg_idx = pcode_arg_idx - 1
+                            #self.println("USER DEBUG: [PARAM_MAP] Found tainted caller arg#{} -> conceptual_arg_idx #{}".format(pcode_arg_idx, conceptual_arg_idx))
                             tainted_arg_details_for_no_map.append("PCodeArg#{}:{}".format(conceptual_arg_idx, self._get_varnode_representation(caller_arg_vn, high_func_to_analyze)))
                             if callee_func_proto and conceptual_arg_idx < num_formal_params:
+                                #self.println("USER DEBUG: [PARAM_MAP] Arg index is within formal param count. Attempting to get param symbol.")
                                 callee_param_symbol = callee_func_proto.getParam(conceptual_arg_idx)
+                                #self.println("USER DEBUG: [PARAM_MAP] Callee param symbol object: {}".format(callee_param_symbol))
                                 hv_to_taint = callee_param_symbol.getHighVariable() if callee_param_symbol else None
-                                if hv_to_taint: newly_tainted_callee_hvs.add(hv_to_taint)
-                                else: self.println("WARN: Tainted arg for {}, but no HighVar for callee param #{}.".format(called_function_obj.getName(),conceptual_arg_idx ))
+                                #self.println("USER DEBUG: [PARAM_MAP] HighVariable to be tainted in callee: {}".format(hv_to_taint))
+                                if hv_to_taint: 
+                                    newly_tainted_callee_hvs.add(hv_to_taint)
+                                    #self.println("USER DEBUG: [PARAM_MAP] Successfully added HighVariable to the new taint set.")
+                                else: 
+                                    self.println("WARN: Tainted arg for {}, but no HighVar for callee param #{}. This could be due to optimized out param or incorrect signature.".format(called_function_obj.getName(),conceptual_arg_idx ))
                             else: 
-                                pass # Will be logged below if newly_tainted_callee_hvs is empty but tainted_arg_details_for_no_map is not
+                                #self.println("USER DEBUG: [PARAM_MAP] Arg index {} is OUTSIDE formal param count {}. Cannot map.".format(conceptual_arg_idx, num_formal_params))
+                                pass
+                    
+                    #self.println("USER DEBUG: [PARAM_MAP] Finished param mapping. Size of newly_tainted_callee_hvs: {}".format(len(newly_tainted_callee_hvs)))
                     if newly_tainted_callee_hvs:
+                        #self.println("USER DEBUG: [PARAM_MAP] Entering 'if newly_tainted_callee_hvs' block to start recursion.")
                         self.all_tainted_usages.append({
                             "originating_imported_function_name": originating_imported_func_name_for_log,
                             "function_name": func_name, "function_entry": func_entry_addr.toString(),
@@ -441,8 +1098,9 @@ class TaintAnalyzer:
                             "usage_type": "TAINTED_ARG_TO_CALL_RECURSION",
                             "details": "Recursive call to {} ({}) with taints: {}.".format(called_function_obj.getName(), mnemonic, ", ".join([self._get_varnode_representation(h, high_called_func) for h in newly_tainted_callee_hvs]))
                         })
-                        self._trace_taint_in_function(high_called_func, newly_tainted_callee_hvs, None, originating_imported_func_name_for_log, current_depth + 1, sub_recursion_budget=sub_recursion_budget, current_sub_depth=current_sub_depth +1 if sub_recursion_budget is not None else 0)
+                        self._trace_taint_in_function(high_called_func, newly_tainted_callee_hvs, None, originating_imported_func_name_for_log, current_depth + 1, sub_recursion_budget=sub_recursion_budget, current_sub_depth=current_sub_depth +1 if sub_recursion_budget is not None else 0, analysis_config=analysis_config, tainted_memory_regions=tainted_memory_regions)
                     elif tainted_arg_details_for_no_map: # Tainted args exist but couldn't be mapped
+                        #self.println("USER DEBUG: [PARAM_MAP] Entering 'elif tainted_arg_details_for_no_map' block. Recursion might happen with empty taint set.")
                         self.all_tainted_usages.append({
                             "originating_imported_function_name": originating_imported_func_name_for_log,
                             "function_name": func_name, "function_entry": func_entry_addr.toString(),
@@ -450,7 +1108,9 @@ class TaintAnalyzer:
                             "usage_type": "TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS",
                             "details": "Tainted PCode args ({}) to {} ({}) cannot map to HighProto (count {}).".format(", ".join(tainted_arg_details_for_no_map), called_function_obj.getName(), mnemonic, num_formal_params)
                         })
+                        self._trace_taint_in_function(high_called_func, newly_tainted_callee_hvs, None, originating_imported_func_name_for_log, current_depth + 1, sub_recursion_budget=sub_recursion_budget, current_sub_depth=current_sub_depth +1 if sub_recursion_budget is not None else 0, analysis_config=analysis_config, tainted_memory_regions=tainted_memory_regions)
                 else: # Unresolved call
+                    #self.println("USER DEBUG: Entering 'else' block for unresolved call.")
                     target_func_addr_vn = current_pcode_op.getInput(0)
                     potential_target_addr_to_explore = None; exploration_context_msg = ""
                     if target_func_addr_vn.isConstant():
@@ -490,7 +1150,7 @@ class TaintAnalyzer:
                                             if hv_to_taint_att: newly_tainted_attempt.add(hv_to_taint_att)
                                 if newly_tainted_attempt:
                                     self.all_tainted_usages.append({"originating_imported_function_name": originating_imported_func_name_for_log, "function_name": func_name, "function_entry": func_entry_addr.toString(), "address": current_op_address_str, "pcode_op_str": str(current_pcode_op), "usage_type": "EXPLORING_INITIALLY_UNRESOLVED_CALL", "details": "Exploring {} to {} ({}) with taints. Budget: {}.".format(mnemonic, attempted_func_obj.getName(), exploration_context_msg, self.UNRESOLVED_CALL_EXPLORE_BUDGET)})
-                                    self._trace_taint_in_function(high_attempted_func, newly_tainted_attempt, None, originating_imported_func_name_for_log, current_depth + 1, sub_recursion_budget=self.UNRESOLVED_CALL_EXPLORE_BUDGET, current_sub_depth=0)
+                                    self._trace_taint_in_function(high_attempted_func, newly_tainted_attempt, None, originating_imported_func_name_for_log, current_depth + 1, sub_recursion_budget=self.UNRESOLVED_CALL_EXPLORE_BUDGET, current_sub_depth=0, analysis_config=analysis_config, tainted_memory_regions=tainted_memory_regions)
                                 elif any_tainted_arg_for_attempt:
                                      self.all_tainted_usages.append({"originating_imported_function_name": originating_imported_func_name_for_log, "function_name": func_name, "function_entry": func_entry_addr.toString(), "address": current_op_address_str, "pcode_op_str": str(current_pcode_op), "usage_type": "TAINTED_ARG_TO_EXPLORED_CALL_NO_PARAM_MAP", "details": "Tainted args ({}) to {} (resolved to {}), but no HighProto map. {}".format(", ".join(tainted_arg_details_attempt_no_map), mnemonic, attempted_func_obj.getName(), exploration_context_msg)})
                             else: self._log_unresolved_call_with_tainted_args(current_pcode_op, high_func_to_analyze, tainted_high_vars_in_current_func, func_name, func_entry_addr, current_op_address, originating_imported_func_name_for_log, "(decomp failed for explored {})".format(exploration_context_msg))
@@ -498,23 +1158,124 @@ class TaintAnalyzer:
                     else: self._log_unresolved_call_with_tainted_args(current_pcode_op, high_func_to_analyze, tainted_high_vars_in_current_func, func_name, func_entry_addr, current_op_address, originating_imported_func_name_for_log, "(cannot explore target)")
 
             if output_hv and output_hv not in tainted_high_vars_in_current_func:
-                is_newly_tainted = False; source_of_taint_repr = "N/A"
-                unary_ops = ["COPY", "CAST", "INT_NEGATE", "INT_2COMP", "POPCOUNT", "INT_ZEXT", "INT_SEXT", "FLOAT_NEG", "FLOAT_ABS", "FLOAT_SQRT", "FLOAT2FLOAT", "TRUNC", "CEIL", "FLOOR", "ROUND", "INT2FLOAT", "FLOAT2INT", "BOOL_NEGATE"]
-                multi_ops = ["INT_ADD", "INT_SUB", "INT_MULT", "INT_DIV", "INT_SDIV", "INT_REM", "INT_SREM", "INT_AND", "INT_OR", "INT_XOR", "INT_LEFT", "INT_RIGHT", "INT_SRIGHT", "INT_EQUAL", "INT_NOTEQUAL", "INT_LESS", "INT_SLESS", "INT_LESSEQUAL", "INT_SLESSEQUAL", "FLOAT_ADD", "FLOAT_SUB", "FLOAT_MULT", "FLOAT_DIV", "FLOAT_EQUAL", "FLOAT_NOTEQUAL", "FLOAT_LESS", "FLOAT_LESSEQUAL", "BOOL_XOR", "BOOL_AND", "BOOL_OR", "MULTIEQUAL", "PIECE", "SUBPIECE", "PTRADD", "PTRSUB"]
-                load_op = "LOAD"; inputs_to_check = []
-                if mnemonic == load_op and current_pcode_op.getNumInputs() > 1: inputs_to_check.append(current_pcode_op.getInput(1))
-                elif mnemonic in unary_ops and current_pcode_op.getNumInputs() > 0: inputs_to_check.append(current_pcode_op.getInput(0))
-                elif mnemonic in multi_ops:
-                    if mnemonic == "SUBPIECE" and current_pcode_op.getNumInputs() > 0: inputs_to_check.append(current_pcode_op.getInput(0))
-                    else: 
-                        for i in range(current_pcode_op.getNumInputs()): inputs_to_check.append(current_pcode_op.getInput(i))
-                for input_vn in inputs_to_check:
-                    if input_vn:
-                        input_hv = input_vn.getHigh()
-                        if input_hv:
-                            input_hv_repr = self._get_varnode_representation(input_hv, high_func_to_analyze)
-                            if (mnemonic == load_op and (input_hv_repr in tainted_high_var_representations_in_current_func or input_hv in tainted_high_vars_in_current_func)) or (mnemonic != load_op and input_hv in tainted_high_vars_in_current_func):
-                                is_newly_tainted = True; source_of_taint_repr = input_hv_repr; break
+                is_newly_tainted = False
+                source_of_taint_repr = "N/A"
+
+                # --- [BEGIN] Refactored Taint Propagation Logic ---
+
+                # Rule 1: Handle LOAD operations separately and with detailed logging.
+                if mnemonic == "LOAD":
+                    load_addr_vn = current_pcode_op.getInput(1)
+                    self.println("DEBUG: [LOAD_HANDLER] Checking LOAD op at {}. Address varnode: {}".format(current_op_address_str, load_addr_vn))
+
+                    # Heuristic 1.1: Check if loading from a tainted stack offset.
+                    if tainted_stack_offsets:
+                        # Use the new, more powerful recursive search for the load address
+                        load_stack_offset = self._get_stack_offset_from_varnode_recursive(load_addr_vn, high_func_to_analyze)
+                        
+                        # Rule 1.1.1: Direct match on the final calculated offset
+                        if load_stack_offset is not None and load_stack_offset in tainted_stack_offsets:
+                            is_newly_tainted = True
+                            source_of_taint_repr = "Tainted Stack Location [offset {:#x}]".format(load_stack_offset)
+                            self.println("DEBUG: [LOAD_HANDLER] STACK_RULE SUCCESS (direct): Tainting output due to load from tainted stack offset {:#x}.".format(load_stack_offset))
+
+                        # Rule 1.1.2: Check if loading from an address based on a tainted stack variable (struct/array access)
+                        if not is_newly_tainted:
+                            load_addr_def_op = load_addr_vn.getDef()
+                            if load_addr_def_op and load_addr_def_op.getMnemonic() == "PTRADD":
+                                base_vn = load_addr_def_op.getInput(0)
+                                base_offset = self._get_stack_offset_from_varnode_recursive(base_vn, high_func_to_analyze)
+                                if base_offset is not None and base_offset in tainted_stack_offsets:
+                                    is_newly_tainted = True
+                                    offset_vn = load_addr_def_op.getInput(1)
+                                    field_offset = offset_vn.getOffset() if offset_vn.isConstant() else '?'
+                                    source_of_taint_repr = "Tainted Stack Location [base {:#x} + field {:#x}]".format(base_offset, field_offset)
+                                    self.println("DEBUG: [LOAD_HANDLER] STACK_RULE SUCCESS (base): Tainting output due to load from tainted stack base {:#x}.".format(base_offset))
+
+                    # Heuristic 1.2: Check if the address pointer itself is tainted.
+                    if not is_newly_tainted:
+                        # Use the more robust recursive check to see if the address itself is tainted.
+                        if self._is_varnode_tainted_recursive(load_addr_vn, high_func_to_analyze, tainted_high_vars_in_current_func):
+                            is_newly_tainted = True
+                            load_addr_repr = self._get_varnode_representation(load_addr_vn, high_func_to_analyze)
+                            source_of_taint_repr = "Tainted Address Pointer ({})".format(load_addr_repr)
+                            self.println("DEBUG: [LOAD_HANDLER] POINTER_RULE SUCCESS: Tainting output due to load from tainted address pointer (recursive check).")
+                            
+                            # NEW: Also taint the address pointer itself to propagate the taint through pointer arithmetic.
+                            load_addr_hv = load_addr_vn.getHigh()
+                            if load_addr_hv and load_addr_hv not in tainted_high_vars_in_current_func:
+                                tainted_high_vars_in_current_func.add(load_addr_hv)
+                                tainted_high_var_representations_in_current_func.add(load_addr_repr)
+                                self.println("DEBUG: [LOAD_HANDLER] POINTER_RULE PROPAGATION: Tainting the address pointer '{}' itself.".format(load_addr_repr))
+
+                        else:
+                            self.println("DEBUG: [LOAD_HANDLER] POINTER_RULE FAIL: Address varnode {} is not tainted (recursive check).".format(self._get_varnode_representation(load_addr_vn, high_func_to_analyze)))
+                    
+                    # Heuristic 1.3: Check if loading from a tainted memory region (new rule).
+                    if not is_newly_tainted:
+                        load_addr_hv = load_addr_vn.getHigh()
+                        # --- [BEGIN] ENHANCED REGION RULE with BASE+OFFSET support ---
+                        is_tainted_by_region = False
+                        if load_addr_hv and load_addr_hv in tainted_memory_regions:
+                            is_tainted_by_region = True
+                            source_of_taint_repr = "Tainted Memory Region via pointer ({})".format(
+                                self._get_varnode_representation(load_addr_hv, high_func_to_analyze)
+                            )
+                        else:
+                            # Check for PTRADD base
+                            def_op = load_addr_vn.getDef()
+                            if def_op and def_op.getMnemonic() == "PTRADD":
+                                base_vn = def_op.getInput(0)
+                                base_hv = base_vn.getHigh()
+                                if base_hv:
+                                    # --- FINAL FIX: Compare by representative varnode ---
+                                    base_rep = base_hv.getRepresentative()
+                                    for tainted_region_hv in tainted_memory_regions:
+                                        tainted_rep = tainted_region_hv.getRepresentative()
+                                        if base_rep and tainted_rep and base_rep.equals(tainted_rep):
+                                            is_tainted_by_region = True
+                                            source_of_taint_repr = "Tainted Memory Region via base pointer ({})".format(
+                                                self._get_varnode_representation(base_hv, high_func_to_analyze)
+                                            )
+                                            break # Found a match
+                                    # --- END FINAL FIX ---
+
+                        if is_tainted_by_region:
+                            is_newly_tainted = True
+                            self.println("DEBUG: [LOAD_HANDLER] REGION_RULE SUCCESS: Tainting output due to load from a tainted memory region.")
+                        else:
+                            self.println("DEBUG: [LOAD_HANDLER] REGION_RULE FAIL: Address pointer {} is not in the tainted memory regions set.".format(
+                                self._get_varnode_representation(load_addr_hv, high_func_to_analyze)
+                            ))
+                        # --- [END] ENHANCED REGION RULE with BASE+OFFSET support ---
+                
+                # Rule 2: Handle all other operations that propagate taint.
+                else:
+                    inputs_to_check = []
+                    unary_ops = ["COPY", "CAST", "INT_NEGATE", "INT_2COMP", "POPCOUNT", "INT_ZEXT", "INT_SEXT", "FLOAT_NEG", "FLOAT_ABS", "FLOAT_SQRT", "FLOAT2FLOAT", "TRUNC", "CEIL", "FLOOR", "ROUND", "INT2FLOAT", "FLOAT2INT", "BOOL_NEGATE"]
+                    multi_ops = ["INT_ADD", "INT_SUB", "INT_MULT", "INT_DIV", "INT_SDIV", "INT_REM", "INT_SREM", "INT_AND", "INT_OR", "INT_XOR", "INT_LEFT", "INT_RIGHT", "INT_SRIGHT", "INT_EQUAL", "INT_NOTEQUAL", "INT_LESS", "INT_SLESS", "INT_LESSEQUAL", "INT_SLESSEQUAL", "FLOAT_ADD", "FLOAT_SUB", "FLOAT_MULT", "FLOAT_DIV", "FLOAT_EQUAL", "FLOAT_NOTEQUAL", "FLOAT_LESS", "FLOAT_LESSEQUAL", "BOOL_XOR", "BOOL_AND", "BOOL_OR", "MULTIEQUAL", "PIECE", "SUBPIECE", "PTRADD", "PTRSUB"]
+
+                    if mnemonic in unary_ops and current_pcode_op.getNumInputs() > 0:
+                        inputs_to_check.append(current_pcode_op.getInput(0))
+                    elif mnemonic in multi_ops:
+                        # For SUBPIECE, only the first operand (the larger piece) matters for taint source.
+                        if mnemonic == "SUBPIECE" and current_pcode_op.getNumInputs() > 0:
+                            inputs_to_check.append(current_pcode_op.getInput(0))
+                        else:
+                            for i in range(current_pcode_op.getNumInputs()):
+                                inputs_to_check.append(current_pcode_op.getInput(i))
+
+                    for input_vn in inputs_to_check:
+                        if input_vn:
+                            input_hv = input_vn.getHigh()
+                            if input_hv and input_hv in tainted_high_vars_in_current_func:
+                                is_newly_tainted = True
+                                source_of_taint_repr = self._get_varnode_representation(input_hv, high_func_to_analyze)
+                                # Found a tainted input, no need to check others for this op
+                                break
+                
+                # --- [END] Refactored Taint Propagation Logic ---
+
                 if is_newly_tainted:
                     should_add_taint_prop = True; is_strlen_call_output = False
                     if mnemonic in ["CALL", "CALLIND"] and output_vn and output_vn.getHigh() == output_hv:
@@ -539,6 +1300,7 @@ class TaintAnalyzer:
                         output_hv_repr_set = self._get_varnode_representation(output_hv, high_func_to_analyze)
                         tainted_high_var_representations_in_current_func.add(output_hv_repr_set)
                         self.println("DEBUG: [{} @ {}] Taint propagated from {} to {} via {}.".format(func_name, current_op_address_str, source_of_taint_repr, output_hv_repr_set, mnemonic))
+                        #self.println("USER DEBUG: P-code for propagation is: {}".format(current_pcode_op))
 
             if output_hv and output_hv in tainted_high_vars_in_current_func:
                 if output_hv in current_func_input_param_hvs and output_hv not in initial_tainted_hvs:
@@ -553,19 +1315,104 @@ class TaintAnalyzer:
                     })
                     self.println("INFO: [{} @ {}] {}.".format(func_name, current_op_address_str, details_param_term))
                     return 
+
+            # --- [BEGIN] Tainted Comparison Sink Check ---
+            comparison_mnemonics = {
+                "INT_EQUAL", "INT_NOTEQUAL", "INT_SLESS", "INT_SLESSEQUAL", "INT_LESS", "INT_LESSEQUAL",
+                "FLOAT_EQUAL", "FLOAT_NOTEQUAL", "FLOAT_LESS", "FLOAT_LESSEQUAL"
+            }
+            if mnemonic in comparison_mnemonics:
+                is_any_input_tainted = False
+                tainted_input_repr = "N/A"
+                for i in range(current_pcode_op.getNumInputs()):
+                    input_vn = current_pcode_op.getInput(i)
+                    if self._is_varnode_tainted_recursive(input_vn, high_func_to_analyze, tainted_high_vars_in_current_func):
+                        is_any_input_tainted = True
+                        tainted_input_repr = self._get_varnode_representation(input_vn, high_func_to_analyze)
+                        break # Found one, no need to check others
+
+                if is_any_input_tainted:
+                    op1_vn = current_pcode_op.getInput(0)
+                    op2_vn = current_pcode_op.getInput(1)
+                    op1_repr = self._get_varnode_representation(op1_vn, high_func_to_analyze)
+                    op2_repr = self._get_varnode_representation(op2_vn, high_func_to_analyze)
+                    final_compared_ops = [op1_repr, op2_repr]
+                    
+                    instruction_at_op = self.current_program.getListing().getInstructionAt(current_op_address)
+
+                    self.all_tainted_usages.append({
+                        "originating_imported_function_name": originating_imported_func_name_for_log,
+                        "function_name": func_name,
+                        "function_entry": func_entry_addr.toString(),
+                        "address": current_op_address_str,
+                        "pcode_op_str": str(current_pcode_op),
+                        "usage_type": "TAINTED_COMPARISON",
+                        "tainted_component_repr": tainted_input_repr,
+                        "compared_ops_repr": final_compared_ops,
+                        "instruction_mnemonic": instruction_at_op.getMnemonicString() if instruction_at_op else "N/A",
+                        "details": "Tainted value used in a comparison operation ({}).".format(mnemonic)
+                    })
+                    self.println("INFO: [{} @ {}] Taint reached COMPARISON op ({}). Operands: {}.".format(
+                        func_name, current_op_address_str, mnemonic, final_compared_ops
+                    ))
+            # --- [END] Tainted Comparison Sink Check ---
+
         self.println("<<< Finished analyzing function: {}.".format(func_name))
 
+    def _apply_aliasing_heuristic(self, dest_addr_hv, high_func_to_analyze, tainted_memory_regions):
+        """
+        Heuristic: If a tainted pointer is a stack variable, taint nearby stack
+        variables that are also pointers, assuming they are part of the same struct
+        (e.g., std::vector).
+        """
+        try:
+            symbol_p = dest_addr_hv.getSymbol()
+            if symbol_p and symbol_p.getStorage().isStackStorage():
+                offset_p = symbol_p.getStorage().getStackOffset()
+                self.println("DEBUG: [ALIASING] Tainted store pointer {} is a stack var at offset {:#x}".format(dest_addr_hv.getName(), offset_p))
+
+                local_symbols = high_func_to_analyze.getLocalSymbolMap().getSymbols()
+                while local_symbols.hasNext():
+                    symbol_q = local_symbols.next()
+                    # Ensure we have a valid symbol with stack storage and a HighVariable
+                    if not symbol_q or not symbol_q.getStorage().isStackStorage():
+                        continue
+                    
+                    hv_q = symbol_q.getHighVariable()
+                    if not hv_q or hv_q == dest_addr_hv:
+                        continue
+
+                    # Check if it's a pointer type and close on the stack
+                    if isinstance(hv_q.getDataType(), Pointer):
+                        offset_q = symbol_q.getStorage().getStackOffset()
+                        if abs(offset_p - offset_q) <= 24: # Heuristic for 3 pointers of 8 bytes
+                            if hv_q not in tainted_memory_regions:
+                                tainted_memory_regions.add(hv_q)
+                                self.println("DEBUG: [ALIASING] Found potential alias {}. Tainting its memory region too.".format(
+                                    self._get_varnode_representation(hv_q, high_func_to_analyze)
+                                ))
+        except Exception as e:
+            self.printerr("WARN: [ALIASING] Error during alias analysis heuristic: {}".format(e))
+            
     # -------------------
     # Output/Reporting Methods
     # -------------------
-    def _print_results(self):
+    def _get_filtered_results(self):
+        """
+        Applies filtering logic to the raw taint usage results based on analyzer settings.
+        This centralizes the filtering logic used by both printing and saving functions.
+        """
         if not self.all_tainted_usages:
-            self.println("No tainted usages to print.")
-            return
+            return []
 
-        self.println("\\n--- All Detected Tainted Value Usages (Interprocedural) ---")
-        included_usage_types = [
+        # If reporting all types is enabled, no filtering is needed.
+        if self.report_all_usage_types:
+            return self.all_tainted_usages
+
+        # Default set of usage types to include in reports.
+        included_usage_types = {
             "BRANCH_CONDITION_TAINTED",
+            "TAINTED_COMPARISON",
             "TAINTED_ARG_TO_CALL_RECURSION",
             "TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS",
             "TAINTED_ARG_TO_EXPLORED_CALL_NO_PARAM_MAP",
@@ -575,42 +1422,49 @@ class TaintAnalyzer:
             "TAINT_PROPAGATED_FROM_THUNK_CALL_RETURN",
             "TAINT_PROPAGATED_TO_THUNK_CALL_POINTER_ARG",
             "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN",
-            "TAINTED_MEMORY_ACCESS"
-        ]
-        cpu_flag_core_names = [
+            "TAINTED_MEMORY_ACCESS",
+            "TAINT_PROPAGATED_BY_RULE",
+            "STORE_TAINTED_VALUE",
+            "TAINTED_POINTER_DEALLOCATED"
+        }
+        
+        # Names of CPU flags to filter out if aggressive branch filtering is on.
+        cpu_flag_core_names = {
             "tmpcy", "ng", "zf", "cf", "of", "sf", "pf", 
             "tmpnz", "tmpov", "tmpca", "af", 
             "cc_n", "cc_z", "cc_c", "cc_v"
-        ]
-        filtered_results_to_print = []
-        for res in self.all_tainted_usages:
-            include_this_result = False
-            if res["usage_type"] in included_usage_types:
-                include_this_result = True
-            
-            if self.aggressive_branch_filtering and res["usage_type"] == "BRANCH_CONDITION_TAINTED":
-                is_cpu_flag_component = False
-                tainted_comp_repr = res.get("tainted_component_repr", "")
-                lc_tainted_comp_repr = tainted_comp_repr.lower()
-                for flag_name in cpu_flag_core_names:
-                    if "({}".format(flag_name) in lc_tainted_comp_repr and lc_tainted_comp_repr.endswith(")"):
-                        last_paren_open_idx = lc_tainted_comp_repr.rfind('(')
-                        if last_paren_open_idx != -1 and lc_tainted_comp_repr[-1] == ')':
-                            content_in_paren = lc_tainted_comp_repr[last_paren_open_idx+1:-1]
-                            if content_in_paren == flag_name:
-                                is_cpu_flag_component = True; break
-                    if lc_tainted_comp_repr == flag_name:
-                        is_cpu_flag_component = True; break
-                if is_cpu_flag_component:
-                    include_this_result = False
-            
-            if include_this_result:
-                filtered_results_to_print.append(res)
+        }
 
+        filtered_results = []
+        for res in self.all_tainted_usages:
+            usage_type = res.get("usage_type")
+            if usage_type not in included_usage_types:
+                continue
+
+            # Aggressive branch filtering logic
+            if self.aggressive_branch_filtering and usage_type == "BRANCH_CONDITION_TAINTED":
+                tainted_comp_repr = res.get("tainted_component_repr", "").lower()
+                # A simple heuristic to check if the tainted component is just a CPU flag.
+                # e.g., "zf(tmpZR)" or "cf(tmpca)"
+                if '(' in tainted_comp_repr and tainted_comp_repr.endswith(')'):
+                    content_in_paren = tainted_comp_repr[tainted_comp_repr.rfind('(')+1:-1]
+                    if content_in_paren in cpu_flag_core_names:
+                        continue # Skip this result
+                elif tainted_comp_repr in cpu_flag_core_names:
+                    continue # Skip this result
+
+            filtered_results.append(res)
+            
+        return filtered_results
+
+    def _print_results(self):
+        filtered_results_to_print = self._get_filtered_results()
         if not filtered_results_to_print:
-            self.println("No usages matching the current filter were found.")
+            self.println("No tainted usages matching the current filter were found.")
             return
 
+        self.println("\\n--- All Detected Tainted Value Usages (Interprocedural) ---")
+        
         usage_counter = 0
         for res in filtered_results_to_print:
             usage_counter += 1
@@ -633,7 +1487,8 @@ class TaintAnalyzer:
             self.println("-" * 40)
 
     def _save_results_to_json(self):
-        if not self.all_tainted_usages:
+        usages_to_process = self._get_filtered_results()
+        if not usages_to_process:
             self.println("No tainted usages to save to JSON.")
             return
 
@@ -666,45 +1521,9 @@ class TaintAnalyzer:
             self.printerr("Error: Output file path for JSON was not determined. Cannot save results.")
             return
 
-        included_usage_types_for_json = [
-            "BRANCH_CONDITION_TAINTED", "TAINTED_ARG_TO_CALL_RECURSION",
-            "TAINTED_ARG_TO_CALL_NO_PARAM_MAP_OR_VARARGS", "TAINTED_ARG_TO_EXPLORED_CALL_NO_PARAM_MAP",
-            "TAINTED_ARG_TO_UNRESOLVED_CALL", "EXPLORING_INITIALLY_UNRESOLVED_CALL", 
-            "RETURN_TAINTED_VALUE", "TAINT_PROPAGATED_FROM_THUNK_CALL_RETURN",
-            "TAINT_PROPAGATED_TO_THUNK_CALL_POINTER_ARG",
-            "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN",
-            "TAINTED_MEMORY_ACCESS"
-        ]
-        cpu_flag_core_names_for_json = [
-            "tmpcy", "ng", "zf", "cf", "of", "sf", "pf", "tmpnz", "tmpov", "tmpca", "af", 
-            "cc_n", "cc_z", "cc_c", "cc_v"
-        ]
-
         all_simplified_usages = [] 
-        for usage in self.all_tainted_usages:
-            should_include_this_usage = False
-            current_usage_type = usage.get("usage_type")
-            if current_usage_type in included_usage_types_for_json:
-                should_include_this_usage = True
-            
-            if self.aggressive_branch_filtering and current_usage_type == "BRANCH_CONDITION_TAINTED":
-                is_cpu_flag_component = False
-                tainted_comp_repr = usage.get("tainted_component_repr", "")
-                lc_tainted_comp_repr = tainted_comp_repr.lower()
-                for flag_name in cpu_flag_core_names_for_json:
-                    if "({}".format(flag_name) in lc_tainted_comp_repr and lc_tainted_comp_repr.endswith(")"):
-                        last_paren_open_idx = lc_tainted_comp_repr.rfind('(')
-                        if last_paren_open_idx != -1 and lc_tainted_comp_repr[-1] == ')':
-                            content_in_paren = lc_tainted_comp_repr[last_paren_open_idx+1:-1]
-                            if content_in_paren == flag_name:
-                                is_cpu_flag_component = True; break
-                    if lc_tainted_comp_repr == flag_name:
-                        is_cpu_flag_component = True; break
-                if is_cpu_flag_component:
-                    should_include_this_usage = False
-
-            if not should_include_this_usage: continue
-
+        
+        for usage in usages_to_process:
             usage_entry_for_json = {
                 "originating_imported_function_name": usage.get("originating_imported_function_name", "Unknown_Origin"),
                 "found_in_function_name": usage.get("function_name", "N/A"),
@@ -718,8 +1537,11 @@ class TaintAnalyzer:
                 usage_entry_for_json["details"] = usage["details"]
             if usage.get("usage_type") == "STORE_TAINTED_VALUE" and "destination_repr" in usage:
                 usage_entry_for_json["store_destination"] = usage["destination_repr"]
-            if usage.get("usage_type") == "BRANCH_CONDITION_TAINTED" and "compared_operands" in usage:
-                usage_entry_for_json["branch_compared_operands"] = usage["compared_operands"]
+            if usage.get("usage_type") == "BRANCH_CONDITION_TAINTED":
+                if "compared_operands" in usage:
+                    usage_entry_for_json["branch_compared_operands"] = usage["compared_operands"]
+                if "instruction_mnemonic" in usage:
+                    usage_entry_for_json["instruction_mnemonic"] = usage["instruction_mnemonic"]
             all_simplified_usages.append(usage_entry_for_json)
 
         try:
@@ -781,6 +1603,8 @@ class TaintAnalyzer:
             
         self.println("INFO: Found {} unique call sites. Analyzing each...".format(len(all_call_sites)))
         
+        # --- Stage 1 Analysis ---
+        self.println("\n--- Starting Stage 1 Taint Analysis from '{}' call sites ---".format(target_keyword))
         for call_site_addr in sorted(list(all_call_sites), key=lambda addr: addr.getOffset()):
             self.println("\n--- Analyzing Call Site #{} at {} ---".format(call_site_addr.getOffset(), call_site_addr))
             
@@ -828,11 +1652,44 @@ class TaintAnalyzer:
             self._trace_taint_in_function(
                 high_parent_func, current_initial_taint_source_hv_set, target_call_op,
                 originating_imported_func_name_for_log=target_keyword,
-                current_depth=0
+                current_depth=0,
+                analysis_config={
+                    'usage_types_to_report': self.default_usage_types_to_report
+                },
+                tainted_memory_regions=set() # Start with fresh memory regions
             )
     
-        if not all_call_sites: 
-            self.println("INFO: No call sites processed for keyword '{}'.".format(target_keyword))
+        # --- Multi-Stage Analysis ---
+        self.println("\n--- Stage 1 Complete. Checking for pending multi-stage analysis tasks... ---")
+        processed_tasks = 0
+        while self.pending_analysis_tasks:
+            processed_tasks += 1
+            task = self.pending_analysis_tasks.pop(0)
+            task_origin = task.get('originating_imported_func_name_for_log', 'Unknown Rule')
+            self.println("\n--- Initiating Stage 2 Analysis Task #{} (from rule: {}) ---".format(
+                processed_tasks, task_origin
+            ))
+            
+            # The key for visited_function_states includes the origin name, so we don't need to clear it.
+            # This allows re-visiting a function if the taint comes from a different logical source.
+            self._trace_taint_in_function(
+                task['high_func_to_analyze'],
+                task['initial_tainted_hvs'],
+                task['pcode_op_start_taint'],
+                task_origin,
+                current_depth=0, # Start a fresh trace from depth 0
+                analysis_config=task['analysis_config'],
+                tainted_memory_regions=task.get('tainted_memory_regions') # Pass memory regions if available
+            )
+        
+        if processed_tasks > 0:
+            self.println("\n--- All Multi-Stage Analysis Tasks Complete. ---")
+        else:
+            self.println("--- No multi-stage analysis tasks were queued. ---")
+
+
+        if not all_call_sites and not processed_tasks > 0: 
+            self.println("INFO: No call sites processed for keyword '{}' and no multi-stage tasks run.".format(target_keyword))
 
         self.println("\n--- Taint Analysis Run Complete ---")
         if self.all_tainted_usages:
