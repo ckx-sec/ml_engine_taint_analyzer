@@ -1,0 +1,16 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Jython/Ghidra cache files
+*$py.class
+*.py.class
+
+# Log files
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*~
