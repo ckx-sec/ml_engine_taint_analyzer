@@ -2,6 +2,7 @@
 # An MNN-specific taint analysis script that uses the generic taint engine.
 # It defines MNN-specific heuristics and injects them into the generic analyzer.
 
+# Ghidra Script Boilerplate
 try:
     _current_program = currentProgram
     _current_address = currentAddress
@@ -317,7 +318,7 @@ def generate_hook_config(analyzer):
                         
                         mnemonic = prev_instr.getMnemonicString().lower()
                         # Common ARM comparison instructions (integer and float) that set flags
-                        if mnemonic in ['cmp', 'tst', 'cmn', 'teq', 'fcmp', 'fcmpe']:
+                        if mnemonic in ['cmp', 'tst', 'cmn', 'teq', 'fcmp', 'fcmpe', 'ucmp', 'subs', 'adds', 'ands']:
                             comparison_instruction_obj = prev_instr
                             # Get address without memory space prefix, e.g., "ram:001021ac" -> "001021ac"
                             comparison_address_str = comparison_instruction_obj.getAddress().toString().split(":")[-1]
@@ -372,23 +373,26 @@ def generate_hook_config(analyzer):
                 modified_branch_address_str = "N/A"
 
             
-            # Clean up register representations and add taint info
-            raw_registers = usage.get("compared_ops_repr", [])
-            tainted_comp_repr_raw = usage.get("tainted_component_repr", None)
-            
-            cleaned_tainted_comp = None
-            if tainted_comp_repr_raw:
-                cleaned_tainted_comp = analyzer.cleanup_operand_repr(tainted_comp_repr_raw)
-            
+            # --- MODIFIED LOGIC: Use high-level P-code representations from analysis results ---
             registers_with_taint_info = []
-            for reg_repr in raw_registers:
-                cleaned_reg = analyzer.cleanup_operand_repr(reg_repr)
-                #is_tainted = cleaned_tainted_comp is not None and cleaned_tainted_comp == cleaned_reg
-                
+            
+            # The 'compared_ops_repr' field in the usage log already contains the high-level
+            # variable representations as determined by the taint analyzer.
+            # We will use this directly instead of re-parsing the assembly instruction to get
+            # the desired high-level IR form (e.g., bVar1, UNNAMED, etc.).
+            raw_high_level_vars = usage.get("compared_ops_repr", [])
+            
+            if not raw_high_level_vars:
+                analyzer.printerr("WARN: No high-level operand representations found in usage log for branch at {}. 'registers' field will be empty.".format(address_str))
+
+            for var_repr in raw_high_level_vars:
+                # The representation is already in the desired high-level format, e.g., "bVar1(UniquePcode[...])"
+                # We use the cleanup function to ensure consistency, as was done in the previous version's fallback.
+                cleaned_var = analyzer.cleanup_operand_repr(var_repr)
                 registers_with_taint_info.append({
-                    "register": cleaned_reg,
-                    # "is_tainted": is_tainted
+                    "register": cleaned_var
                 })
+
 
             entry = {
                 "address": modified_address_str,
@@ -452,7 +456,7 @@ def run_analysis_from_ghidra_ui():
             rule_handlers=mnn_rules
         )
         target_api_keyword = "getSessionOutput"
-        analyzer.run(target_api_keyword)
+        analyzer.run([target_api_keyword])
 
         # After the main analysis, generate the specialized hook config
         generate_hook_config(analyzer)

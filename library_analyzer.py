@@ -143,6 +143,7 @@ def generate_hook_config(analyzer):
                 "branch_target": branch_target_str,
                 "original_branch_address": modified_branch_address_str,
                 "original_branch_instruction": usage.get("instruction_mnemonic", "N/A").lower(),
+                "pcode_compared_ops": usage.get("compared_ops_repr", []),
                 "set_id": set_id
             }
             hook_entries.append(entry)

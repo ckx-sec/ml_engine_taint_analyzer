@@ -257,7 +257,8 @@ class TaintAnalyzer:
             "TAINT_PROPAGATED_TO_THUNK_CALL_POINTER_ARG",
             "TAINT_PROPAGATED_FROM_HOST_CALL_RETURN",
             "TAINTED_MEMORY_ACCESS",
-            "TAINTED_POINTER_DEALLOCATED"
+            "TAINTED_POINTER_DEALLOCATED",
+            "TAINT_PROPAGATED_TO_CALLER_VIA_PARAM"
         }
         self.decompiler_timeout_secs = 60
 
@@ -803,12 +804,12 @@ class TaintAnalyzer:
                         "destination_repr": self._get_varnode_representation(dest_addr_vn, high_func_to_analyze)
                     }
                     if dest_addr_hv and dest_addr_hv in current_func_input_param_hvs and dest_addr_hv not in initial_tainted_hvs:
-                        details_store_term = "Tainted value stored into input parameter {} of {}. Path terminated.".format(self._get_varnode_representation(dest_addr_hv, high_func_to_analyze), func_name)
-                        usage_entry_store["usage_type"] = "TAINT_REACHED_INPUT_PARAMETER_TERMINATION"
-                        usage_entry_store["details"] = details_store_term
-                        self.all_tainted_usages.append(usage_entry_store)
-                        self.println("INFO: [{} @ {}] {}.".format(func_name, current_op_address_str, details_store_term))
-                        return 
+                        self.println("NEW LOGIC: Instead of terminating, propagate taint back to callers.")
+                        self._propagate_taint_to_callers_via_param(
+                            dest_addr_hv, high_func_to_analyze, current_pcode_op,
+                            originating_imported_func_name_for_log, analysis_config
+                        )
+                        return # This path is now handled by the multi-stage analysis, so we can return.
                     else:
                         usage_entry_store["usage_type"] = "STORE_TAINTED_VALUE"
                         usage_entry_store["details"] = "Tainted value stored."
@@ -1189,7 +1190,7 @@ class TaintAnalyzer:
                                     is_newly_tainted = True
                                     offset_vn = load_addr_def_op.getInput(1)
                                     field_offset = offset_vn.getOffset() if offset_vn.isConstant() else '?'
-                                    source_of_taint_repr = "Tainted Stack Location [base {:#x} + field {:#x}]".format(base_offset, field_offset)
+                                    source_of_taint_repr = "Tainted Stack Location [base {:#x} + field {}]".format(base_offset, "{:#x}".format(field_offset) if isinstance(field_offset, (int, long)) else field_offset)
                                     self.println("DEBUG: [LOAD_HANDLER] STACK_RULE SUCCESS (base): Tainting output due to load from tainted stack base {:#x}.".format(base_offset))
 
                     # Heuristic 1.2: Check if the address pointer itself is tainted.
@@ -1304,17 +1305,12 @@ class TaintAnalyzer:
 
             if output_hv and output_hv in tainted_high_vars_in_current_func:
                 if output_hv in current_func_input_param_hvs and output_hv not in initial_tainted_hvs:
-                    details_param_term = "Taint propagated to input parameter {} of {}. Path terminated.".format(self._get_varnode_representation(output_hv, high_func_to_analyze), func_name)
-                    self.all_tainted_usages.append({
-                        "originating_imported_function_name": originating_imported_func_name_for_log,
-                        "function_name": func_name, "function_entry": func_entry_addr.toString(),
-                        "address": current_op_address_str, "pcode_op_str": str(current_pcode_op),
-                        "usage_type": "TAINT_REACHED_INPUT_PARAMETER_TERMINATION",
-                        "tainted_component_repr": self._get_varnode_representation(output_hv, high_func_to_analyze),
-                        "details": details_param_term
-                    })
-                    self.println("INFO: [{} @ {}] {}.".format(func_name, current_op_address_str, details_param_term))
-                    return 
+                    # NEW LOGIC: Instead of terminating, propagate taint back to callers.
+                    self._propagate_taint_to_callers_via_param(
+                        output_hv, high_func_to_analyze, current_pcode_op,
+                        originating_imported_func_name_for_log, analysis_config
+                    )
+                    return # This path is now handled by the multi-stage analysis, so we can return.
 
             # --- [BEGIN] Tainted Comparison Sink Check ---
             comparison_mnemonics = {
@@ -1394,6 +1390,103 @@ class TaintAnalyzer:
         except Exception as e:
             self.printerr("WARN: [ALIASING] Error during alias analysis heuristic: {}".format(e))
             
+    def _propagate_taint_to_callers_via_param(self, tainted_param_hv, high_func, pcode_op, originating_imported_func_name_for_log, analysis_config):
+        """
+        Handles the case where taint is propagated to a function's input parameter.
+        This function will find all call sites of the current function and create new
+        analysis tasks to propagate the taint back to the arguments in the caller functions.
+        """
+        func_name = high_func.getFunction().getName()
+        
+        # 1. Find the index of the tainted parameter.
+        proto = high_func.getFunctionPrototype()
+        num_params = proto.getNumParams()
+        tainted_param_index = -1
+        for i in range(num_params):
+            param = proto.getParam(i)
+            # Ensure we are comparing the same HighVariable instance
+            if param and param.getHighVariable() and param.getHighVariable().getRepresentative().equals(tainted_param_hv.getRepresentative()):
+                tainted_param_index = i
+                break
+        
+        if tainted_param_index == -1:
+            self.printerr("WARN: [PARAM_PROPAGATION] Could not find index for tainted parameter {} in {}. Cannot propagate to callers.".format(
+                self._get_varnode_representation(tainted_param_hv, high_func), func_name
+            ))
+            return
+
+        # 2. Log this special propagation event.
+        details_str = "Taint propagated to parameter #{} ({}) of '{}'. Taint will now be propagated back to all call sites.".format(
+            tainted_param_index,
+            self._get_varnode_representation(tainted_param_hv, high_func),
+            func_name
+        )
+        self.all_tainted_usages.append({
+            "originating_imported_function_name": originating_imported_func_name_for_log,
+            "function_name": func_name,
+            "function_entry": high_func.getFunction().getEntryPoint().toString(),
+            "address": pcode_op.getSeqnum().getTarget().toString(),
+            "pcode_op_str": str(pcode_op),
+            "usage_type": "TAINT_PROPAGATED_TO_CALLER_VIA_PARAM",
+            "tainted_component_repr": self._get_varnode_representation(tainted_param_hv, high_func),
+            "details": details_str
+        })
+        self.println("INFO: [PARAM_PROPAGATION] " + details_str)
+
+        # 3. Find all call sites and queue new analysis tasks for the callers.
+        current_function_obj = high_func.getFunction()
+        call_site_refs = self.ref_manager.getReferencesTo(current_function_obj.getEntryPoint())
+        
+        for ref in call_site_refs:
+            if not ref.getReferenceType().isCall():
+                continue
+                
+            caller_func = self.func_manager.getFunctionContaining(ref.getFromAddress())
+            if not caller_func:
+                continue
+                
+            try:
+                decompile_res_caller = self.decompiler.decompileFunction(caller_func, self.decompiler_timeout_secs, self.monitor)
+                if decompile_res_caller and decompile_res_caller.getHighFunction():
+                    high_caller_func = decompile_res_caller.getHighFunction()
+                    
+                    # Find the exact call p-code operation in the caller function.
+                    call_op_in_caller = None
+                    op_iter_caller = high_caller_func.getPcodeOps(ref.getFromAddress())
+                    while op_iter_caller.hasNext():
+                        pcode_op_caller = op_iter_caller.next()
+                        if pcode_op_caller.getMnemonic() in ["CALL", "CALLIND"]:
+                            call_op_in_caller = pcode_op_caller
+                            break
+                    
+                    if call_op_in_caller:
+                        # P-code arguments are [target, arg0, arg1, ...], so we need index + 1
+                        pcode_arg_index = tainted_param_index + 1
+                        if pcode_arg_index < call_op_in_caller.getNumInputs():
+                            arg_vn = call_op_in_caller.getInput(pcode_arg_index)
+                            arg_hv = arg_vn.getHigh()
+                            if arg_hv:
+                                new_task = {
+                                    "high_func_to_analyze": high_caller_func,
+                                    "initial_tainted_hvs": {arg_hv},
+                                    "pcode_op_start_taint": call_op_in_caller,
+                                    "originating_imported_func_name_for_log": "tainted_param_from_{}".format(current_function_obj.getName()),
+                                    "analysis_config": analysis_config,
+                                    "tainted_memory_regions": set() # Start with a fresh set of memory regions for the new path
+                                }
+                                self.pending_analysis_tasks.append(new_task)
+                                self.println("INFO: [PARAM_PROPAGATION] Queued new task for caller '{}' from tainted parameter.".format(caller_func.getName()))
+                            else:
+                                 self.printerr("WARN: [PARAM_PROPAGATION] Tainted parameter corresponds to argument {} which has no HighVariable in caller {}.".format(
+                                     self._get_varnode_representation(arg_vn, high_caller_func), caller_func.getName()
+                                 ))
+                        else:
+                            self.printerr("WARN: [PARAM_PROPAGATION] Tainted parameter index {} is out of bounds for call at {} in {}.".format(
+                                tainted_param_index, ref.getFromAddress(), caller_func.getName()
+                            ))
+            except Exception as e:
+                self.printerr("ERROR: [PARAM_PROPAGATION] Failed to process call site at {} in {}: {}".format(ref.getFromAddress(), caller_func.getName(), e))
+
     # -------------------
     # Output/Reporting Methods
     # -------------------
@@ -1425,7 +1518,8 @@ class TaintAnalyzer:
             "TAINTED_MEMORY_ACCESS",
             "TAINT_PROPAGATED_BY_RULE",
             "STORE_TAINTED_VALUE",
-            "TAINTED_POINTER_DEALLOCATED"
+            "TAINTED_POINTER_DEALLOCATED",
+            "TAINT_PROPAGATED_TO_CALLER_VIA_PARAM"
         }
         
         # Names of CPU flags to filter out if aggressive branch filtering is on.
@@ -1556,27 +1650,35 @@ class TaintAnalyzer:
     # -------------------
     # Main Public Method
     # -------------------
-    def run(self, target_keyword):
-        self.println("INFO: Searching for functions, thunks, and call sites related to keyword '{}'".format(target_keyword))
+    def run(self, target_keywords):
+        if not isinstance(target_keywords, list):
+            target_keywords = [target_keywords]
+        self.println("INFO: Searching for functions, thunks, and call sites related to keywords: {}".format(target_keywords))
 
 
         target_ext_funcs = []
+        # Using a set to avoid duplicates if multiple keywords match the same function
+        found_funcs = set()
         ext_funcs_iter = self.func_manager.getExternalFunctions()
         while ext_funcs_iter.hasNext():
             ext_func = ext_funcs_iter.next()
-            if target_keyword in ext_func.getName():
-                target_ext_funcs.append(ext_func)
+            for keyword in target_keywords:
+                if keyword in ext_func.getName():
+                    found_funcs.add(ext_func)
 
-        if not target_ext_funcs:
-            self.println("WARN: No external function found with keyword '{}'. Trying all functions...".format(target_keyword))
+        if not found_funcs:
+            self.println("WARN: No external function found with keywords '{}'. Trying all functions...".format(target_keywords))
             all_funcs_iter = self.func_manager.getFunctions(True)
             while all_funcs_iter.hasNext():
                 func = all_funcs_iter.next()
-                if target_keyword in func.getName():
-                    target_ext_funcs.append(func)
-            if not target_ext_funcs:
-                self.printerr("ERROR: No function found with keyword '{}'. Exiting.".format(target_keyword))
-                return
+                for keyword in target_keywords:
+                    if keyword in func.getName():
+                        found_funcs.add(func)
+        
+        target_ext_funcs = list(found_funcs)
+        if not target_ext_funcs:
+            self.printerr("ERROR: No function found with any of the keywords '{}'. Exiting.".format(target_keywords))
+            return
 
         all_callable_targets = set(target_ext_funcs)
         for ext_func in target_ext_funcs:
@@ -1598,13 +1700,13 @@ class TaintAnalyzer:
                     all_call_sites.add(ref.getFromAddress())
 
         if not all_call_sites:
-            self.printerr("ERROR: No call sites found for any targets related to keyword '{}'.".format(target_keyword))
+            self.printerr("ERROR: No call sites found for any targets related to keywords '{}'.".format(target_keywords))
             return
             
         self.println("INFO: Found {} unique call sites. Analyzing each...".format(len(all_call_sites)))
         
         # --- Stage 1 Analysis ---
-        self.println("\n--- Starting Stage 1 Taint Analysis from '{}' call sites ---".format(target_keyword))
+        self.println("\n--- Starting Stage 1 Taint Analysis from '{}' call sites ---".format(target_keywords))
         for call_site_addr in sorted(list(all_call_sites), key=lambda addr: addr.getOffset()):
             self.println("\n--- Analyzing Call Site #{} at {} ---".format(call_site_addr.getOffset(), call_site_addr))
             
@@ -1651,7 +1753,7 @@ class TaintAnalyzer:
 
             self._trace_taint_in_function(
                 high_parent_func, current_initial_taint_source_hv_set, target_call_op,
-                originating_imported_func_name_for_log=target_keyword,
+                originating_imported_func_name_for_log=str(target_keywords),
                 current_depth=0,
                 analysis_config={
                     'usage_types_to_report': self.default_usage_types_to_report
@@ -1689,14 +1791,14 @@ class TaintAnalyzer:
 
 
         if not all_call_sites and not processed_tasks > 0: 
-            self.println("INFO: No call sites processed for keyword '{}' and no multi-stage tasks run.".format(target_keyword))
+            self.println("INFO: No call sites processed for keywords '{}' and no multi-stage tasks run.".format(target_keywords))
 
         self.println("\n--- Taint Analysis Run Complete ---")
         if self.all_tainted_usages:
             self._print_results()
             self._save_results_to_json()
         else:
-            self.println("No tainted value usages detected for keyword '{}'.".format(target_keyword))
+            self.println("No tainted value usages detected for keywords '{}'.".format(target_keywords))
 
 
 # -------------------
