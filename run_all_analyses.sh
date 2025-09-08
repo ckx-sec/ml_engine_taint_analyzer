@@ -11,9 +11,9 @@ SINGLE_GHIDRA_PROJECT_PATH="$GHIDRA_PROJECT_DIR/$SINGLE_GHIDRA_PROJECT_NAME.gpr"
 SINGLE_GHIDRA_PROJECT_REP_PATH="$GHIDRA_PROJECT_DIR/$SINGLE_GHIDRA_PROJECT_NAME.rep"
 
 # 定义存放二进制文件的目录
-BIN_DIR="sample"
+BIN_DIR="assets/merged_bin"
 # 定义分析脚本的列表
-ANALYZERS=("mnn_analyzer.py" "tflite_analyzer.py" "onnxruntime_analyzer.py")
+ANALYZERS=("mnn_analyzer.py" "tflite_analyzer.py" "onnxruntime_analyzer.py" "ncnn_analyzer.py")
 # 定义用于执行分析的核心脚本
 HEADLESS_RUNNER="run_headless_test.sh"
 
@@ -94,6 +94,8 @@ for executable_path in "$BIN_DIR"/*; do
                     analyzer_script="tflite_analyzer.py"; framework_name="TFLite" ;;
                 onnxruntime)
                     analyzer_script="onnxruntime_analyzer.py"; framework_name="ONNX Runtime" ;;
+                ncnn)
+                    analyzer_script="ncnn_analyzer.py"; framework_name="NCNN" ;;
                 tnn)
                     framework_name="TNN"; analyzer_script="" ;;
                 *)
